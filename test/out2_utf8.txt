@@ -1,5 +1,0 @@
-﻿Acessando: https://www.blogger.com/video.g?token=AD6v5dzvjQc7oOP78n8hb0kG2Bd1bY5BWmn-DeZiCNcJzlDhp8Fbanxy4ZIvfFkm1B68U_-5l4XssyYyRnxthK3D5t-8-5fCnE86vpVRL0wEqsf5UySdm_dD1-ypBe41iu3zu6MRD3Rn
-Status: 200
-No .mp4 found directly. Let's try to find play_url
-Found play urls:
-- https://www.gstatic.com/images/icons/material/system/1x/play_arrow_white_48dp.png)
