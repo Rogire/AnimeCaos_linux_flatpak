@@ -1,0 +1,5 @@
+﻿Fetching: https://animesonlinecc.to/episodio/afro-samurai-episodio-1/
+=== Todos bot§es/divs na pßgina ===
+TAG: div, CLASS: player_sist, TEXT: , ONCLICK: 
+TAG: div, CLASS: playex, TEXT: , ONCLICK: 
+TAG: div, CLASS: play-box-iframe fixidtab, TEXT: , ONCLICK: 

@@ -1,0 +1,8 @@
+﻿Fetching: https://animesonlinecc.to/episodio/afro-samurai-episodio-1/
+Found 2 player source tabs
+
+--- Tab 0: 'playex' ---
+  iframe src: https://www.blogger.com/video.g?token=AD6v5dwoGgvIDBA9iI_OOjotm44vaZxoTb0QSqb5UGxS2cuYR0zEC8EKUi83wTURszzY1CQv3-kuBmJDLR
+
+--- Tab 1: '' ---
+  iframe src: https://www.blogger.com/video.g?token=AD6v5dwoGgvIDBA9iI_OOjotm44vaZxoTb0QSqb5UGxS2cuYR0zEC8EKUi83wTURszzY1CQv3-kuBmJDLR
