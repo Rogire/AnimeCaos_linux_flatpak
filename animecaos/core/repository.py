@@ -143,7 +143,7 @@ class Repository:
                 try:
                     player_src = future.result()
                     if player_src:
-                        if "blogger.com/video.g" in player_src:
+                        if "blogger.com" in player_src:
                             errors.append(f"{source}: link do blogger bloqueado globalmente")
                             continue
                         for pending in future_to_source:

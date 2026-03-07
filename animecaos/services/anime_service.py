@@ -63,8 +63,8 @@ class AnimeService:
         self.ensure_plugins_loaded()
         return rep.search_player(anime, episode_index + 1)
 
-    def play_url(self, url: str) -> None:
-        play_video(url, self._debug)
+    def play_url(self, url: str) -> dict[str, bool]:
+        return play_video(url, self._debug)
 
     def get_episode_sources(self, anime: str) -> list[tuple[list[str], str]]:
         return list(rep.anime_episodes_urls.get(anime, []))

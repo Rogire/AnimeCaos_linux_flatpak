@@ -4,7 +4,7 @@ from __future__ import annotations
 def build_stylesheet() -> str:
     return """
     QWidget {
-        background-color: #0E0F12;
+        background: transparent;
         color: #F2F3F5;
         font-family: "Segoe UI", "Helvetica Neue", sans-serif;
         font-size: 13px;
@@ -40,9 +40,14 @@ def build_stylesheet() -> str:
         color: #E6E7EA;
     }
 
-    QLabel#MutedText {
+    QLabel#MutedText, QTextEdit#MutedText {
         color: #A7ACB5;
         font-size: 12px;
+    }
+    
+    QTextEdit#MutedText {
+        background: transparent;
+        border: none;
     }
 
     QLineEdit, QPlainTextEdit, QListWidget {

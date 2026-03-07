@@ -3,7 +3,7 @@ from abc import ABC, abstractmethod
 from collections.abc import Sequence
 
 
-AVAILABLE_PLUGINS: tuple[str, ...] = ("animesonlinecc", "animefire", "animesvision")
+AVAILABLE_PLUGINS: tuple[str, ...] = ("hinatasoul", "betteranime", "animesonlinecc", "animefire", "animesvision")
 
 
 class PluginInterface(ABC):

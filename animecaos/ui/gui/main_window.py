@@ -6,8 +6,9 @@ import os
 import sys
 
 from PySide6.QtCore import Qt, QThreadPool
-from PySide6.QtGui import QIcon
+from PySide6.QtGui import QIcon, QPixmap
 from PySide6.QtWidgets import (
+    QCheckBox,
     QFrame,
     QHBoxLayout,
     QLabel,
@@ -20,20 +21,31 @@ from PySide6.QtWidgets import (
     QProgressBar,
     QPushButton,
     QSplitter,
+    QTextEdit,
     QVBoxLayout,
     QWidget,
 )
 
 from animecaos.services.anime_service import AnimeService
 from animecaos.services.history_service import HistoryEntry, HistoryService
-from .workers import FunctionWorker
+from animecaos.services.watchlist_service import WatchlistService
+from animecaos.services.anilist_service import AniListService
+from .workers import FunctionWorker, DownloadWorker
 
 
 class MainWindow(QMainWindow):
-    def __init__(self, anime_service: AnimeService, history_service: HistoryService) -> None:
+    def __init__(
+        self,
+        anime_service: AnimeService,
+        history_service: HistoryService,
+        watchlist_service: WatchlistService,
+        anilist_service: AniListService,
+    ) -> None:
         super().__init__()
         self._anime_service = anime_service
         self._history_service = history_service
+        self._watchlist_service = watchlist_service
+        self._anilist_service = anilist_service
         self._thread_pool = QThreadPool.globalInstance()
         self._active_workers: set[FunctionWorker] = set()
         self._busy = False
@@ -56,6 +68,7 @@ class MainWindow(QMainWindow):
         self._build_ui()
         self._bind_events()
         self._reload_history()
+        self._reload_watchlist()
         self._sync_controls()
 
     def _build_ui(self) -> None:
@@ -75,7 +88,7 @@ class MainWindow(QMainWindow):
         branding_layout = QVBoxLayout()
         branding_layout.setSpacing(2)
 
-        title = QLabel("animecaos")
+        title = QLabel('anime<span style="color: #D44242;">caos</span>')
         title.setObjectName("AppTitle")
         branding_layout.addWidget(title)
         header_layout.addLayout(branding_layout, 1)
@@ -121,19 +134,54 @@ class MainWindow(QMainWindow):
         layout.setContentsMargins(12, 12, 12, 12)
         layout.setSpacing(8)
 
+        splitter = QSplitter(Qt.Vertical)
+        splitter.setChildrenCollapsible(False)
+        layout.addWidget(splitter, 1)
+
+        # History Box
+        history_widget = QWidget()
+        history_layout = QVBoxLayout(history_widget)
+        history_layout.setContentsMargins(0, 0, 0, 0)
+        history_layout.setSpacing(6)
+
         title = QLabel("Continue Assistindo")
         title.setObjectName("SectionTitle")
-        hint = QLabel("Selecione um item do historico salvo")
+        hint = QLabel("Selecione um item do historico")
         hint.setObjectName("MutedText")
-        layout.addWidget(title)
-        layout.addWidget(hint)
+        history_layout.addWidget(title)
+        history_layout.addWidget(hint)
 
         self.history_list = QListWidget()
         self.history_list.setUniformItemSizes(True)
-        layout.addWidget(self.history_list, 1)
+        history_layout.addWidget(self.history_list, 1)
 
-        self.resume_history_button = QPushButton("Carregar historico selecionado")
-        layout.addWidget(self.resume_history_button)
+        self.resume_history_button = QPushButton("Carregar historico")
+        history_layout.addWidget(self.resume_history_button)
+
+        # Watchlist Box
+        watchlist_widget = QWidget()
+        watchlist_layout = QVBoxLayout(watchlist_widget)
+        watchlist_layout.setContentsMargins(0, 0, 0, 0)
+        watchlist_layout.setSpacing(6)
+
+        w_title = QLabel("Watchlist / Favoritos")
+        w_title.setObjectName("SectionTitle")
+        w_hint = QLabel("Selecione um titulo favoritado")
+        w_hint.setObjectName("MutedText")
+        watchlist_layout.addWidget(w_title)
+        watchlist_layout.addWidget(w_hint)
+
+        self.watchlist_list = QListWidget()
+        self.watchlist_list.setUniformItemSizes(True)
+        watchlist_layout.addWidget(self.watchlist_list, 1)
+
+        self.resume_watchlist_button = QPushButton("Buscar anime selecionado")
+        watchlist_layout.addWidget(self.resume_watchlist_button)
+
+        splitter.addWidget(history_widget)
+        splitter.addWidget(watchlist_widget)
+        splitter.setStretchFactor(0, 50)
+        splitter.setStretchFactor(1, 50)
 
         return panel
 
@@ -173,11 +221,14 @@ class MainWindow(QMainWindow):
         episodes_header = QHBoxLayout()
         episodes_title = QLabel("Episodios")
         episodes_title.setObjectName("SectionTitle")
-        self.play_button = QPushButton("Reproduzir selecionado")
+        self.play_button = QPushButton("Reproduzir")
         self.play_button.setObjectName("PrimaryButton")
+        self.download_button = QPushButton("Baixar")
+        
         episodes_header.addWidget(episodes_title)
         episodes_header.addStretch(1)
         episodes_header.addWidget(self.play_button)
+        episodes_header.addWidget(self.download_button)
         episodes_layout.addLayout(episodes_header)
 
         self.episode_list = QListWidget()
@@ -197,22 +248,51 @@ class MainWindow(QMainWindow):
         layout.setContentsMargins(12, 12, 12, 12)
         layout.setSpacing(8)
 
+        self.cover_label = QLabel()
+        self.cover_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.cover_label.setMinimumHeight(120)
+        self.cover_label.setObjectName("MutedText")
+        self.cover_label.setText("Sem Capa")
+
+        self.synopsis_label = QTextEdit()
+        self.synopsis_label.setReadOnly(True)
+        self.synopsis_label.setFrameShape(QFrame.Shape.NoFrame)
+        self.synopsis_label.setObjectName("MutedText")
+        self.synopsis_label.setMaximumHeight(110)
+
+        meta_layout = QHBoxLayout()
+        meta_layout.addWidget(self.cover_label, 1)
+        meta_layout.addWidget(self.synopsis_label, 2)
+        layout.addLayout(meta_layout)
+
         title = QLabel("Painel de Controle")
         title.setObjectName("SectionTitle")
         layout.addWidget(title)
 
         self.selected_anime_label = QLabel("Anime: -")
         self.selected_anime_label.setWordWrap(True)
+        
+        self.favorite_button = QPushButton("Favoritar")
+        self.favorite_button.setObjectName("PrimaryButton")
+        self.favorite_button.setVisible(False)
+        
+        anime_row = QHBoxLayout()
+        anime_row.addWidget(self.selected_anime_label, 1)
+        anime_row.addWidget(self.favorite_button)
+        layout.addLayout(anime_row)
+
         self.selected_episode_label = QLabel("Episodio: -")
         self.selected_episode_label.setWordWrap(True)
-        layout.addWidget(self.selected_anime_label)
         layout.addWidget(self.selected_episode_label)
 
         playback_controls = QHBoxLayout()
         self.prev_button = QPushButton("Anterior")
         self.next_button = QPushButton("Proximo")
+        self.autoplay_checkbox = QCheckBox("Auto-play proximo")
+        self.autoplay_checkbox.setChecked(True)
         playback_controls.addWidget(self.prev_button)
         playback_controls.addWidget(self.next_button)
+        playback_controls.addWidget(self.autoplay_checkbox)
         layout.addLayout(playback_controls)
 
         url_title = QLabel("URL de reproducao")
@@ -244,8 +324,13 @@ class MainWindow(QMainWindow):
         self.search_button.clicked.connect(self._on_search_clicked)
         self.reload_history_button.clicked.connect(self._reload_history)
         self.resume_history_button.clicked.connect(self._on_resume_history_clicked)
+        self.resume_watchlist_button.clicked.connect(self._on_resume_watchlist_clicked)
         self.history_list.itemSelectionChanged.connect(self._sync_controls)
         self.history_list.itemDoubleClicked.connect(lambda _: self._on_resume_history_clicked())
+        self.watchlist_list.itemSelectionChanged.connect(self._sync_controls)
+        self.watchlist_list.itemDoubleClicked.connect(lambda _: self._on_resume_watchlist_clicked())
+        
+        self.favorite_button.clicked.connect(self._on_favorite_clicked)
 
         self.anime_list.itemSelectionChanged.connect(self._on_anime_selection_changed)
         self.anime_list.itemDoubleClicked.connect(lambda _: self._on_load_episodes_clicked())
@@ -254,6 +339,7 @@ class MainWindow(QMainWindow):
         self.episode_list.itemSelectionChanged.connect(self._on_episode_selection_changed)
         self.episode_list.itemDoubleClicked.connect(lambda _: self._on_play_clicked())
         self.play_button.clicked.connect(self._on_play_clicked)
+        self.download_button.clicked.connect(self._on_download_clicked)
         self.prev_button.clicked.connect(self._on_previous_clicked)
         self.next_button.clicked.connect(self._on_next_clicked)
 
@@ -357,8 +443,35 @@ class MainWindow(QMainWindow):
                 self._current_episode_index = -1
                 self.url_output.clear()
                 self.selected_episode_label.setText("Episodio: -")
+                self.cover_label.setText("Carregando...")
+                self.cover_label.setPixmap(QPixmap())
+                self.synopsis_label.setText("Buscando detalhes...")
+                self._fetch_metadata(anime)
             self._set_status("Anime selecionado. Carregue os episodios.")
         self._sync_controls()
+
+    def _fetch_metadata(self, anime: str) -> None:
+        worker = FunctionWorker(lambda: self._anilist_service.fetch_anime_info(anime))
+        worker.signals.succeeded.connect(self._on_metadata_fetched)
+        self._thread_pool.start(worker)
+
+    def _on_metadata_fetched(self, payload: object) -> None:
+        if not isinstance(payload, dict):
+            return
+        
+        desc = payload.get("description")
+        cover = payload.get("cover_path")
+
+        if desc:
+            self.synopsis_label.setText(desc)
+        else:
+            self.synopsis_label.setText("Sem sinopse disponivel.")
+
+        if cover and os.path.exists(cover):
+            pixmap = QPixmap(cover).scaledToHeight(120, Qt.TransformationMode.SmoothTransformation)
+            self.cover_label.setPixmap(pixmap)
+        else:
+            self.cover_label.setText("Sem Capa")
 
     def _on_load_episodes_clicked(self) -> None:
         anime = self._selected_anime()
@@ -424,12 +537,13 @@ class MainWindow(QMainWindow):
 
     def _play_episode(self, anime: str, episode_index: int) -> dict[str, object]:
         player_url = self._anime_service.resolve_player_url(anime, episode_index)
-        self._anime_service.play_url(player_url)
+        playback_result = self._anime_service.play_url(player_url)
         return {
             "anime": anime,
             "episode_index": episode_index,
             "player_url": player_url,
             "episode_sources": self._anime_service.get_episode_sources(anime),
+            "eof": playback_result.get("eof", False)
         }
 
     def _on_play_finished(self, payload: object) -> None:
@@ -474,6 +588,11 @@ class MainWindow(QMainWindow):
         self._append_log(f"Reproducao concluida: '{anime}' episodio {episode_index + 1}.")
         self._sync_controls()
 
+        if payload.get("eof") and self.autoplay_checkbox.isChecked():
+            if episode_index + 1 < self.episode_list.count():
+                self._append_log("Auto-Play: iniciando o proximo episodio...")
+                self._on_next_clicked()
+
     def _on_previous_clicked(self) -> None:
         index = self._selected_episode_index()
         target = index - 1
@@ -487,12 +606,61 @@ class MainWindow(QMainWindow):
     def _on_next_clicked(self) -> None:
         index = self._selected_episode_index()
         target = index + 1
-        if target >= self.episode_list.count():
-            self._set_status("Nao existe proximo episodio.")
+        if 0 <= target < self.episode_list.count():
+            self.episode_list.setCurrentRow(target)
+            self._on_play_clicked()
+
+    def _on_download_clicked(self) -> None:
+        anime = self._current_anime or self._selected_anime()
+        episode_index = self._selected_episode_index()
+        if not anime:
+            self._set_status("Selecione um anime.")
+            return
+        if episode_index < 0:
+            self._set_status("Selecione um episodio.")
             return
 
-        self.episode_list.setCurrentRow(target)
-        self._on_play_clicked()
+        self._run_task(
+            status_message=f"Resolvendo URL para baixar '{anime}' episodio {episode_index + 1}...",
+            task=lambda: (anime, episode_index, self._anime_service.resolve_player_url(anime, episode_index)),
+            on_success=self._start_download_worker,
+        )
+
+    def _start_download_worker(self, payload: object) -> None:
+        if not isinstance(payload, tuple) or len(payload) != 3:
+            self._set_status("Falha ao resolver url de download.")
+            return
+
+        anime, episode_index, player_url = payload
+        
+        # Windows forbids typical special chars in filenames
+        safe_anime = "".join(c for c in anime if c.isalnum() or c in " -_").strip()
+        out_name = f"{safe_anime} - EP{episode_index + 1}.%(ext)s"
+        
+        import os
+        download_dir = os.path.join(os.path.expanduser("~"), "Downloads", "Animecaos")
+        os.makedirs(download_dir, exist_ok=True)
+        out_template = os.path.join(download_dir, out_name)
+
+        worker = DownloadWorker(player_url, out_template)
+        worker.signals.progress.connect(self._on_download_progress)
+        worker.signals.succeeded.connect(self._on_download_success)
+        worker.signals.failed.connect(self._on_download_failed)
+        
+        self._append_log(f"Iniciando download de '{anime}' Ep {episode_index + 1}...")
+        self._thread_pool.start(worker)
+
+    def _on_download_progress(self, line: str) -> None:
+        if "[download]" in line or "100%" in line:
+            self._set_status(f"Download: {line[:50].strip()}")
+
+    def _on_download_success(self, path: str) -> None:
+        self._append_log(f"Download concluido salvo em: Downloads/Animecaos")
+        self._set_status("Download finalizado com sucesso!")
+        
+    def _on_download_failed(self, error: str) -> None:
+        self._append_log(f"Falha no download: {error}")
+        self._set_status("Erro no download (veja os logs).")
 
     def _reload_history(self, silent: bool = False) -> None:
         try:
@@ -579,6 +747,45 @@ class MainWindow(QMainWindow):
         self._append_log(f"Historico carregado para '{entry.anime}' no episodio {safe_index + 1}.")
         self._sync_controls()
 
+    def _reload_watchlist(self) -> None:
+        try:
+            animes = self._watchlist_service.load_watchlist()
+        except Exception as exc:
+            self._append_log(f"Falha ao carregar watchlist: {exc}")
+            return
+
+        self.watchlist_list.setUpdatesEnabled(False)
+        try:
+            self.watchlist_list.clear()
+            self.watchlist_list.addItems(animes)
+        finally:
+            self.watchlist_list.setUpdatesEnabled(True)
+
+    def _on_resume_watchlist_clicked(self) -> None:
+        item = self.watchlist_list.currentItem()
+        if not item:
+            self._set_status("Selecione um anime da watchlist.")
+            return
+
+        anime_name = item.text()
+        self.search_input.setText(anime_name)
+        self._on_search_clicked()
+
+    def _on_favorite_clicked(self) -> None:
+        anime = self._current_anime
+        if not anime:
+            return
+
+        if self._watchlist_service.is_favorited(anime):
+            self._watchlist_service.remove_anime(anime)
+            self._append_log(f"Removido dos favoritos: '{anime}'")
+        else:
+            self._watchlist_service.add_anime(anime)
+            self._append_log(f"Adicionado aos favoritos: '{anime}'")
+
+        self._reload_watchlist()
+        self._sync_controls()
+
     def _ensure_anime_visible(self, anime: str) -> None:
         if not anime:
             return
@@ -608,6 +815,7 @@ class MainWindow(QMainWindow):
         has_anime = bool(selected_anime)
         has_episode = self._selected_episode_index() >= 0 and selected_anime == self._episodes_anime
         has_history_item = self.history_list.currentItem() is not None
+        has_watchlist_item = self.watchlist_list.currentItem() is not None
         episode_count = self.episode_list.count()
         episode_index = self._selected_episode_index()
 
@@ -617,8 +825,20 @@ class MainWindow(QMainWindow):
         self.search_button.setEnabled(not self._busy and has_query)
         self.reload_history_button.setEnabled(not self._busy)
         self.resume_history_button.setEnabled(not self._busy and has_history_item)
+        self.resume_watchlist_button.setEnabled(not self._busy and has_watchlist_item)
 
         self.load_episodes_button.setEnabled(not self._busy and has_anime)
         self.play_button.setEnabled(not self._busy and has_anime and has_episode)
+        self.download_button.setEnabled(not self._busy and has_anime and has_episode)
         self.prev_button.setEnabled(not self._busy and can_previous)
         self.next_button.setEnabled(not self._busy and can_next)
+
+        if self._current_anime:
+            self.favorite_button.setVisible(True)
+            self.favorite_button.setEnabled(not self._busy)
+            if self._watchlist_service.is_favorited(self._current_anime):
+                self.favorite_button.setText("★ Remover Favorito")
+            else:
+                self.favorite_button.setText("☆ Favoritar")
+        else:
+            self.favorite_button.setVisible(False)

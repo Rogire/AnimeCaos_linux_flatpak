@@ -32,3 +32,61 @@ class FunctionWorker(QRunnable):
             self.signals.succeeded.emit(result)
         finally:
             self.signals.finished.emit()
+
+
+class DownloadWorkerSignals(QObject):
+    progress = Signal(str)
+    succeeded = Signal(str)
+    failed = Signal(str)
+    finished = Signal()
+
+
+class DownloadWorker(QRunnable):
+    def __init__(self, url: str, output_template: str) -> None:
+        super().__init__()
+        self._url = url
+        self._output_template = output_template
+        self.signals = DownloadWorkerSignals()
+        self._is_cancelled = False
+        self._process = None
+
+    def cancel(self):
+        self._is_cancelled = True
+        if self._process:
+            self._process.terminate()
+
+    @Slot()
+    def run(self) -> None:
+        import subprocess
+        try:
+            flags = 0
+            if __import__("os").name == "nt":
+                flags = subprocess.CREATE_NO_WINDOW
+                
+            self._process = subprocess.Popen(
+                ["yt-dlp", "-o", self._output_template, self._url],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                text=True,
+                creationflags=flags
+            )
+            for line in iter(self._process.stdout.readline, ""):
+                if self._is_cancelled:
+                    break
+                if line:
+                    self.signals.progress.emit(line.strip())
+            self._process.stdout.close()
+            return_code = self._process.wait()
+            
+            if self._is_cancelled:
+                 self.signals.failed.emit("Download cancelado.")
+            elif return_code == 0:
+                self.signals.succeeded.emit(self._output_template)
+            else:
+                self.signals.failed.emit(f"yt-dlp encerrou com erro {return_code}.")
+        except FileNotFoundError:
+            self.signals.failed.emit("yt-dlp nao encontrado. Instale-o ou adicione ao PATH.")
+        except Exception as exc:
+            self.signals.failed.emit(str(exc))
+        finally:
+            self.signals.finished.emit()
