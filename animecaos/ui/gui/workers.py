@@ -58,13 +58,14 @@ class DownloadWorker(QRunnable):
     @Slot()
     def run(self) -> None:
         import subprocess
+        from animecaos.core.paths import get_bin_path
         try:
             flags = 0
             if __import__("os").name == "nt":
                 flags = subprocess.CREATE_NO_WINDOW
                 
             self._process = subprocess.Popen(
-                ["yt-dlp", "-o", self._output_template, self._url],
+                [get_bin_path("yt-dlp"), "-o", self._output_template, self._url],
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,
                 text=True,

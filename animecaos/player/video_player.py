@@ -1,6 +1,8 @@
 import subprocess
 
 
+from animecaos.core.paths import get_bin_path
+
 def play_video(url: str, debug: bool = False) -> dict[str, bool]:
     if debug:
         return {"eof": False}
@@ -8,7 +10,7 @@ def play_video(url: str, debug: bool = False) -> dict[str, bool]:
     try:
         result = subprocess.run(
             [
-                "mpv",
+                get_bin_path("mpv"),
                 url,
                 "--fullscreen",
                 "--cursor-autohide-fs-only",

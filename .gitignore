@@ -1,14 +1,31 @@
+# Python
 __pycache__/
 *.py[cod]
 *.pyo
 
+# Environments
 venv/
 .venv/
+env/
 
+# Build and Packaging
 build/
 dist/
 *.spec
+temp_build/
+bin/
+installer/
 
+# Local Data
+history.json
+watchlist.json
+cache/
 log.txt
+
+# System
 .DS_Store
 Thumbs.db
+.idea/
+.vscode/
+*.swp
+*.bak

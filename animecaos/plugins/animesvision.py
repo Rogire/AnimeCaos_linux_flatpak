@@ -7,6 +7,7 @@ from selenium.webdriver.firefox.service import Service as FirefoxService
 from urllib.parse import quote
 import time
 
+from animecaos.core.paths import get_bin_path
 from animecaos.core.repository import rep
 from animecaos.core.loader import PluginInterface
 from .utils import is_firefox_installed_as_snap
@@ -26,6 +27,13 @@ def _make_driver() -> webdriver.Firefox:
         if is_firefox_installed_as_snap():
             service = FirefoxService(executable_path="/snap/bin/geckodriver")
             return webdriver.Firefox(options=options, service=service)
+        
+        # Inject bundled geckodriver if present
+        gd_path = get_bin_path("geckodriver")
+        if gd_path != "geckodriver":
+            service = FirefoxService(executable_path=gd_path)
+            return webdriver.Firefox(options=options, service=service)
+            
         return webdriver.Firefox(options=options)
     except WebDriverException as exc:
         raise RuntimeError("Firefox/geckodriver nao encontrado.") from exc
