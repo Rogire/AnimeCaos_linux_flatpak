@@ -34,3 +34,8 @@ Thumbs.db
 landing/node_modules/
 landing/.next/
 landing/out/
+
+# Node artifacts at repo root (accidental npm usage outside /landing)
+/node_modules/
+/package.json
+/package-lock.json
