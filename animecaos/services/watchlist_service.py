@@ -19,8 +19,8 @@ def _watchlist_dir(app_name: str) -> Path:
 class WatchlistService:
     """Persistence service for favorited animes (watchlist)."""
 
-    def __init__(self) -> None:
-        self._watchlist_file = _watchlist_dir(APP_NAME) / "watchlist.json"
+    def __init__(self, app_name: str = APP_NAME) -> None:
+        self._watchlist_file = _watchlist_dir(app_name) / "watchlist.json"
 
     def load_watchlist(self) -> list[str]:
         data = self._read_data()

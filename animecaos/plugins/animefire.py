@@ -1,3 +1,6 @@
+import re
+import unicodedata
+
 import requests
 from bs4 import BeautifulSoup
 from selenium import webdriver
@@ -10,21 +13,17 @@ from selenium.webdriver.support.wait import WebDriverWait
 from animecaos.core.loader import PluginInterface
 from animecaos.core.repository import rep
 
-from .utils import is_firefox_installed_as_snap
+from .utils import build_firefox_options, is_firefox_installed_as_snap
 
 
 REQUEST_TIMEOUT_SECONDS = 15
 HEADERS = {"User-Agent": "Mozilla/5.0 (animecaos)"}
-_BLOGGER_MARKER = "blogger.com/video.g"
 
 
-def _uses_blogger(episode_url: str) -> bool:
-    """Return True if the episode page statically embeds a Blogger video link."""
-    try:
-        r = requests.get(episode_url, timeout=REQUEST_TIMEOUT_SECONDS, headers=HEADERS)
-        return _BLOGGER_MARKER in r.text
-    except Exception:
-        return False  # assume OK if unreachable
+def _slugify_query(query: str) -> str:
+    ascii_query = unicodedata.normalize("NFKD", query).encode("ascii", "ignore").decode("ascii")
+    slug = re.sub(r"[^a-zA-Z0-9]+", "-", ascii_query).strip("-")
+    return slug
 
 
 class AnimeFire(PluginInterface):
@@ -33,8 +32,14 @@ class AnimeFire(PluginInterface):
 
     @staticmethod
     def search_anime(query: str):
-        url = "https://animefire.io/pesquisar/" + "-".join(query.split())
+        slug = _slugify_query(query)
+        if not slug:
+            return
+
+        url = f"https://animefire.io/pesquisar/{slug}"
         response = requests.get(url, timeout=REQUEST_TIMEOUT_SECONDS, headers=HEADERS)
+        if response.status_code == 404:
+            return
         response.raise_for_status()
 
         soup = BeautifulSoup(response.text, "html.parser")
@@ -63,31 +68,8 @@ class AnimeFire(PluginInterface):
         if not titles_urls:
             return
 
-        def get_first_episode_url(anime_url: str) -> str:
-            """Return the first episode URL from the anime page, or empty string."""
-            try:
-                r = requests.get(anime_url, timeout=REQUEST_TIMEOUT_SECONDS, headers=HEADERS)
-                r.raise_for_status()
-                s = BeautifulSoup(r.text, "html.parser")
-                link = s.find("a", class_=lambda c: c and "lEp" in c)
-                return link["href"] if link and link.get("href") else ""
-            except Exception:
-                return ""
-
-        from concurrent.futures import ThreadPoolExecutor, as_completed
-        from os import cpu_count
-        workers = max(1, min(len(titles_urls), cpu_count() or 1))
-        with ThreadPoolExecutor(max_workers=workers) as executor:
-            future_to_item = {
-                executor.submit(get_first_episode_url, anime_url): (title, anime_url)
-                for title, anime_url in titles_urls
-            }
-            for future in as_completed(future_to_item):
-                title, anime_url = future_to_item[future]
-                first_ep_url = future.result()
-                if first_ep_url and _uses_blogger(first_ep_url):
-                    continue  # skip – blogger hosting
-                rep.add_anime(title, anime_url, AnimeFire.name)
+        for title, anime_url in titles_urls:
+            rep.add_anime(title, anime_url, AnimeFire.name)
 
     @staticmethod
     def search_episodes(anime: str, url: str, params):
@@ -101,16 +83,11 @@ class AnimeFire(PluginInterface):
         if not episode_links:
             return
 
-        # Reject this source entirely if the first episode uses Blogger hosting.
-        if _uses_blogger(episode_links[0]):
-            return
-
         rep.add_episode_list(anime, episode_titles, episode_links, AnimeFire.name)
 
     @staticmethod
     def search_player_src(url_episode: str) -> str:
-        options = webdriver.FirefoxOptions()
-        options.add_argument("--headless")
+        options = build_firefox_options()
 
         try:
             if is_firefox_installed_as_snap():

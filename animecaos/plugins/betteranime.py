@@ -10,12 +10,11 @@ import time
 from animecaos.core.paths import get_bin_path
 from animecaos.core.repository import rep
 from animecaos.core.loader import PluginInterface
-from .utils import is_firefox_installed_as_snap
+from .utils import build_firefox_options, is_firefox_installed_as_snap
 
 
 def _make_driver() -> webdriver.Firefox:
-    options = webdriver.FirefoxOptions()
-    options.add_argument("--headless")
+    options = build_firefox_options()
     try:
         if is_firefox_installed_as_snap():
             service = FirefoxService(executable_path="/snap/bin/geckodriver")

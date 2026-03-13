@@ -39,3 +39,13 @@ landing/out/
 /node_modules/
 /package.json
 /package-lock.json
+
+# Android mobile
+mobile/android/.gradle/
+mobile/android/.gradle-user/
+mobile/android/.idea/
+mobile/android/build/
+mobile/android/app/build/
+mobile/android/.kotlin/
+mobile/android/local.properties
+mobile/.idea/

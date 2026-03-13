@@ -33,9 +33,15 @@ def _history_dir(app_name: str) -> Path:
 class HistoryService:
     """Persistence service for continue-watching data."""
 
-    def __init__(self) -> None:
-        self._history_file = _history_dir(APP_NAME) / "history.json"
-        self._legacy_history_file = _history_dir(LEGACY_APP_NAME) / "history.json"
+    def __init__(
+        self,
+        app_name: str = APP_NAME,
+        legacy_app_name: str | None = LEGACY_APP_NAME,
+    ) -> None:
+        self._history_file = _history_dir(app_name) / "history.json"
+        self._legacy_history_file = (
+            _history_dir(legacy_app_name) / "history.json" if legacy_app_name else None
+        )
 
     def load_entries(self) -> list[HistoryEntry]:
         data = self._read_data()
@@ -77,7 +83,9 @@ class HistoryService:
     def _resolve_read_path(self) -> Path:
         if self._history_file.exists():
             return self._history_file
-        return self._legacy_history_file
+        if self._legacy_history_file is not None:
+            return self._legacy_history_file
+        return self._history_file
 
     def _read_data(self, ignore_errors: bool = False) -> dict:
         path = self._resolve_read_path()

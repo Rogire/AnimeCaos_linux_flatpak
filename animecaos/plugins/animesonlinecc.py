@@ -13,21 +13,11 @@ from selenium.webdriver.support.wait import WebDriverWait
 from animecaos.core.loader import PluginInterface
 from animecaos.core.repository import rep
 
-from .utils import is_firefox_installed_as_snap
+from .utils import build_firefox_options, is_firefox_installed_as_snap
 
 
 REQUEST_TIMEOUT_SECONDS = 15
 HEADERS = {"User-Agent": "Mozilla/5.0 (animecaos)"}
-_BLOGGER_MARKER = "blogger.com/video.g"
-
-
-def _uses_blogger(episode_url: str) -> bool:
-    """Return True if the episode page statically embeds a Blogger video link."""
-    try:
-        r = requests.get(episode_url, timeout=REQUEST_TIMEOUT_SECONDS, headers=HEADERS)
-        return _BLOGGER_MARKER in r.text
-    except Exception:
-        return False  # assume OK if unreachable
 
 
 def _workers(limit: int) -> int:
@@ -59,39 +49,26 @@ class AnimesOnlineCC(PluginInterface):
             title = anchor.get_text(strip=True)
             anime_url = anchor["href"]
             titles_urls.append((title, anime_url))
-            # NOTE: do NOT call rep.add_anime here; we first inspect for blogger hosting below.
 
-        def inspect_anime(anime_url: str) -> tuple[int, bool]:
-            """Visit the anime page once; return (num_seasons, uses_blogger)."""
+        def inspect_season_count(anime_url: str) -> int:
             try:
                 details = requests.get(anime_url, timeout=REQUEST_TIMEOUT_SECONDS, headers=HEADERS)
                 details.raise_for_status()
                 details_soup = BeautifulSoup(details.text, "html.parser")
-                num_seasons = len(details_soup.find_all("div", class_="se-c"))
-                # Grab first episode URL for a quick blogger pre-check
-                first_ep_div = details_soup.find("div", class_="episodiotitle")
-                first_ep_url = ""
-                if first_ep_div:
-                    ep_anchor = first_ep_div.find("a", href=True)
-                    if ep_anchor:
-                        first_ep_url = ep_anchor["href"]
-                is_blogger = _uses_blogger(first_ep_url) if first_ep_url else False
-                return num_seasons, is_blogger
+                return len(details_soup.find_all("div", class_="se-c")) or 1
             except Exception:
-                return 0, False
+                return 1
 
         with ThreadPoolExecutor(max_workers=_workers(len(titles_urls))) as executor:
             future_to_item = {
-                executor.submit(inspect_anime, anime_url): (title, anime_url)
+                executor.submit(inspect_season_count, anime_url): (title, anime_url)
                 for title, anime_url in titles_urls
             }
             for future in as_completed(future_to_item):
                 title, anime_url = future_to_item[future]
-                num_seasons, is_blogger = future.result()
-                if is_blogger:
-                    continue  # skip – all episodes use blocked hosting
+                season_count = max(1, future.result())
                 rep.add_anime(title, anime_url, AnimesOnlineCC.name)
-                for season_num in range(2, num_seasons + 1):
+                for season_num in range(2, season_count + 1):
                     rep.add_anime(f"{title} Season {season_num}", anime_url, AnimesOnlineCC.name, season_num)
 
     @staticmethod
@@ -120,16 +97,11 @@ class AnimesOnlineCC(PluginInterface):
         if not urls:
             return
 
-        # Reject this source entirely if the first episode uses Blogger hosting.
-        if _uses_blogger(urls[0]):
-            return
-
         rep.add_episode_list(anime, titles, urls, AnimesOnlineCC.name)
 
     @staticmethod
     def search_player_src(url_episode: str) -> str:
-        options = webdriver.FirefoxOptions()
-        options.add_argument("--headless")
+        options = build_firefox_options()
 
         try:
             if is_firefox_installed_as_snap():
