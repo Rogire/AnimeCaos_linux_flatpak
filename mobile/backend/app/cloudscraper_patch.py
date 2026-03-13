@@ -38,7 +38,7 @@ def _get_with_selenium(url: str, headers: dict | None = None) -> requests.Respon
     from selenium import webdriver
     from selenium.webdriver.common.by import By
     from selenium.webdriver.firefox.options import Options
-    from selenium.common.exceptions import TimeoutException
+    from selenium.common.exceptions import TimeoutException, WebDriverException
     from selenium.webdriver.support.ui import WebDriverWait
     from selenium.webdriver.support import expected_conditions as EC
     
@@ -47,16 +47,34 @@ def _get_with_selenium(url: str, headers: dict | None = None) -> requests.Respon
     options = Options()
     options.add_argument("--headless")
     options.binary_location = "/usr/bin/firefox-esr"
+    # User-Agent compatível com o scraper
+    options.set_preference("general.useragent.override", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36")
     
+    driver = None
     try:
-        driver = webdriver.Firefox(options=options)
+        from selenium.webdriver.firefox.service import Service
+        service = Service("/usr/local/bin/geckodriver")
+        driver = webdriver.Firefox(options=options, service=service)
         driver.set_page_load_timeout(30)
         driver.get(url)
         
-        # Aguardar página carregar
-        WebDriverWait(driver, 10).until(
-            lambda d: d.execute_script("return document.readyState") == "complete"
-        )
+        # Estratégia Bypassing Cloudflare: 
+        # Esperar até que o título da página mude (sai do "Just a Moment")
+        # E que elementos do Cloudflare (cf-wrapper, cf-error) desapareçam
+        print(f"[Selenium] Aguardando bypass do Cloudflare...")
+        
+        # Esperar até 20 segundos pelo bypass
+        wait = WebDriverWait(driver, 20)
+        
+        # 1. Esperar título não conter termos do Cloudflare
+        wait.until(lambda d: "Just a Moment" not in d.title and "Cloudflare" not in d.title)
+        
+        # 2. Esperar o body aparecer
+        wait.until(EC.presence_of_element_located((By.TAG_NAME, "body")))
+        
+        # 3. Pequeno delay extra para garantir renderização de JS
+        import time
+        time.sleep(3)
         
         # Pegar HTML da página
         html = driver.page_source
@@ -67,21 +85,29 @@ def _get_with_selenium(url: str, headers: dict | None = None) -> requests.Respon
         response.status_code = 200
         response._content = html.encode("utf-8")
         response.headers["Content-Type"] = "text/html"
+        response.url = driver.current_url
         
-        print(f"[Selenium] Sucesso: {url}")
+        print(f"[Selenium] Sucesso: {url} (Length: {len(html)})")
         return response
         
     except TimeoutException:
-        print(f"[Selenium] Timeout: {url}")
-        raise
+        print(f"[Selenium] Timeout no bypass do Cloudflare: {url}")
+        # Retorna o que conseguiu carregar (provavelmente a página de erro do CF)
+        from requests.models import Response
+        response = Response()
+        response.status_code = 403
+        if driver:
+             response._content = driver.page_source.encode("utf-8")
+        return response
     except Exception as e:
-        print(f"[Selenium] Erro: {url} - {e}")
+        print(f"[Selenium] Erro crítico no fallback: {url} - {e}")
         raise
     finally:
-        try:
-            driver.quit()
-        except:
-            pass
+        if driver:
+            try:
+                driver.quit()
+            except:
+                pass
 
 
 def _patched_get(url, **kwargs):
