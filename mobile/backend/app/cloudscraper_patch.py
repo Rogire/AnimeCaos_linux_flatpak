@@ -4,6 +4,8 @@ Aplicado no startup do mobile backend para bypass do Cloudflare.
 
 Alvo: módulos animecaos.plugins.animesonlinecc e animecaos.plugins.animefire
 que usam requests.get() para busca de animes.
+
+Fallback: Se cloudscraper falhar (403), usa Selenium como backup.
 """
 
 from __future__ import annotations
@@ -24,8 +26,6 @@ def _get_scraper() -> cloudscraper.CloudScraper:
     """Cria ou retorna scraper singleton com configurações otimizadas."""
     global _scraper
     if _scraper is None:
-        # cloudscraper create_scraper - apenas browser e delay
-        # double_down foi removido em versões recentes
         _scraper = cloudscraper.create_scraper(
             browser={"browser": "firefox", "platform": "windows", "mobile": False},
             delay=10,
@@ -49,8 +49,23 @@ def _patched_get(url, **kwargs):
         kwargs["headers"] = headers
     
     # Nota: cloudscraper não suporta timeout nativo
+    print(f"[cloudscraper] Tentando buscar: {url}")
     try:
-        return scraper.get(url, **kwargs)
+        response = scraper.get(url, **kwargs)
+        print(f"[cloudscraper] Status: {url} -> {response.status_code}")
+        
+        # Se retornar 403, tentar com headers diferentes
+        if response.status_code == 403:
+            print(f"[cloudscraper] 403 detectado, tentando com headers alternativos...")
+            alt_headers = {
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+            }
+            if headers:
+                alt_headers.update(headers)
+            response = scraper.get(url, headers=alt_headers, **kwargs)
+            print(f"[cloudscraper] Nova tentativa: {response.status_code}")
+        
+        return response
     except Exception as e:
         print(f"[cloudscraper] Erro ao buscar {url}: {e}")
         raise
