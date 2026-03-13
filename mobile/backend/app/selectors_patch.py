@@ -96,15 +96,15 @@ def _patched_animesvision_search_player_src(episode_url: str) -> str:
 def _patched_animefire_search_anime(query: str):
     from animecaos.core.repository import rep
     from animecaos.plugins.animefire import AnimeFire, _slugify_query, HEADERS, REQUEST_TIMEOUT_SECONDS
-    import requests
+    from app.cloudscraper_patch import patched_get
 
     slug = _slugify_query(query)
     if not slug: return
     url = f"https://animefire.io/pesquisar/{slug}"
     
     try:
-        # Usa requests (já patcheado pelo cloudscraper_patch se estiver ativo)
-        response = requests.get(url, timeout=REQUEST_TIMEOUT_SECONDS, headers=HEADERS)
+        # Usa o patched_get para bypass do Cloudflare
+        response = patched_get(url, timeout=REQUEST_TIMEOUT_SECONDS, headers=HEADERS)
         if response.status_code == 404: return
         response.raise_for_status()
         
@@ -130,11 +130,12 @@ def _patched_animesonlinecc_search_anime(query: str):
     from animecaos.core.repository import rep
     from animecaos.plugins.animesonlinecc import AnimesOnlineCC, HEADERS, REQUEST_TIMEOUT_SECONDS, _workers
     from concurrent.futures import ThreadPoolExecutor, as_completed
-    import requests
+    from app.cloudscraper_patch import patched_get
 
     url = "https://animesonlinecc.to/search/" + "+".join(query.split())
     try:
-        response = requests.get(url, timeout=REQUEST_TIMEOUT_SECONDS, headers=HEADERS)
+        # Usa o patched_get para bypass do Cloudflare
+        response = patched_get(url, timeout=REQUEST_TIMEOUT_SECONDS, headers=HEADERS)
         response.raise_for_status()
         soup = BeautifulSoup(response.text, "html.parser")
         
@@ -149,7 +150,7 @@ def _patched_animesonlinecc_search_anime(query: str):
 
         def inspect_season_count(anime_url: str) -> int:
             try:
-                details = requests.get(anime_url, timeout=REQUEST_TIMEOUT_SECONDS, headers=HEADERS)
+                details = patched_get(anime_url, timeout=REQUEST_TIMEOUT_SECONDS, headers=HEADERS)
                 details_soup = BeautifulSoup(details.text, "html.parser")
                 return len(details_soup.find_all("div", class_="se-c")) or 1
             except: return 1

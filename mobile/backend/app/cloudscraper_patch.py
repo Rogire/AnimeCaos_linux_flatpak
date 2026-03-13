@@ -110,7 +110,7 @@ def _get_with_selenium(url: str, headers: dict | None = None) -> requests.Respon
                 pass
 
 
-def _patched_get(url, **kwargs):
+def patched_get(url, **kwargs):
     """
     Substituto drop-in para requests.get().
     Estratégia: cloudscraper -> Selenium fallback
@@ -181,7 +181,7 @@ def apply() -> None:
     # 2. Criar wrapper
     class CloudScraperRequests:
         """Wrapper drop-in para requests."""
-        get = staticmethod(_patched_get)
+        get = staticmethod(patched_get)
         head = staticmethod(_patched_head)
         post = staticmethod(_patched_post)
         
