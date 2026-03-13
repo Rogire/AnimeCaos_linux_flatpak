@@ -10,15 +10,23 @@ from animecaos.player.video_player import play_video
 class AnimeService:
     """Application service for anime search, episode loading and playback."""
 
-    def __init__(self, debug: bool = False) -> None:
+    def __init__(self, debug: bool = False, plugins: list[str] | None = None) -> None:
         self._debug = debug
         self._plugins_loaded = False
+        self._selected_plugins = plugins
 
     def ensure_plugins_loaded(self) -> None:
         if self._plugins_loaded:
             return
 
-        selected_plugins = ["animesonlinecc"] if self._debug else None
+        # Use provided plugins or default to single plugin in debug mode
+        if self._selected_plugins is not None:
+            selected_plugins = self._selected_plugins
+        elif self._debug:
+            selected_plugins = ["animesonlinecc"]
+        else:
+            selected_plugins = None
+            
         loader.load_plugins({"pt-br"}, selected_plugins)
         self._plugins_loaded = True
 

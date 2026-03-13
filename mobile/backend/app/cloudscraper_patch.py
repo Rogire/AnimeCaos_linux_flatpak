@@ -24,11 +24,18 @@ def _get_scraper() -> cloudscraper.CloudScraper:
     """Cria ou retorna scraper singleton com configurações otimizadas."""
     global _scraper
     if _scraper is None:
-        _scraper = cloudscraper.create_scraper(
-            browser={"browser": "firefox", "platform": "windows", "mobile": False},
-            delay=10,
-            double_down=True,
-        )
+        # cloudscraper create_scraper com configurações compatíveis
+        kwargs = {
+            "browser": {"browser": "firefox", "platform": "windows", "mobile": False},
+            "delay": 10,
+        }
+        # double_down foi descontinuado em versões recentes
+        # tentar usar se disponivel
+        try:
+            kwargs["double_down"] = True
+        except TypeError:
+            pass
+        _scraper = cloudscraper.create_scraper(**kwargs)
     return _scraper
 
 
