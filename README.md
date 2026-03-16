@@ -30,6 +30,22 @@ Centralize sua experiência de assistir anime em uma única aplicação, sem an�
 <br/>
 
 <div align="center">
+  <img src="screenshot4.png" alt="AnimeCaos - Busca" width="780"/>
+  <br/>
+  <em>Busca com capas dinamicas</em>
+</div>
+
+<br/>
+
+<div align="center">
+  <img src="screenshot3.png" alt="AnimeCaos - Detalhes" width="780"/>
+  <br/>
+  <em>Detalhes do anime e lista de episodios</em>
+</div>
+
+<br/>
+
+<div align="center">
   <img src="screenshot.png" alt="AnimeCaos - Player" width="680"/>
   <br/>
   <em>Player integrado</em>

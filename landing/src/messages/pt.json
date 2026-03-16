@@ -115,6 +115,8 @@
     "label": "Preview",
     "title": "Veja o app em ação",
     "caption_app": "Tela principal — busca, biblioteca e gerenciamento de animes",
+    "caption_search": "Busca com capas dinâmicas e metadados do AniList",
+    "caption_detail": "Detalhes do anime com sinopse, capa e lista de episódios",
     "caption_player": "Player integrado com suporte a auto-play e download"
   },
   "footer": {

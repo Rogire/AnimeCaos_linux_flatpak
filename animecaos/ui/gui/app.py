@@ -7,7 +7,6 @@ from PySide6.QtWidgets import QApplication
 
 from animecaos.services.anime_service import AnimeService
 from animecaos.services.history_service import HistoryService
-from animecaos.services.watchlist_service import WatchlistService
 from animecaos.services.anilist_service import AniListService
 from .main_window import MainWindow
 from .splash import SplashScreen
@@ -34,7 +33,6 @@ def run_gui(debug: bool = False) -> int:
     # Build services while splash is showing
     anime_service = AnimeService(debug=debug)
     history_service = HistoryService()
-    watchlist_service = WatchlistService()
     anilist_service = AniListService()
 
     window: MainWindow | None = None
@@ -44,7 +42,6 @@ def run_gui(debug: bool = False) -> int:
         window = MainWindow(
             anime_service=anime_service,
             history_service=history_service,
-            watchlist_service=watchlist_service,
             anilist_service=anilist_service,
         )
         window.show()

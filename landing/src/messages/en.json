@@ -115,6 +115,8 @@
         "label": "Preview",
         "title": "See the app in action",
         "caption_app": "Main screen — search, library and anime management",
+        "caption_search": "Search with dynamic covers and AniList metadata",
+        "caption_detail": "Anime details with synopsis, cover and episode list",
         "caption_player": "Built-in player with auto-play and download support"
     },
     "footer": {

@@ -186,9 +186,89 @@ export default function Screenshots() {
                     {t("caption_app")}
                 </motion.p>
 
-                {/* Secondary screenshot – Player (slightly smaller, indented) */}
+                {/* Search results */}
                 <div style={{ padding: "0 3%" }}>
-                    <MacOSWindow title="AnimeCaos — Player" delay={0.3}>
+                    <MacOSWindow title="AnimeCaos — Busca" delay={0.25}>
+                        <div
+                            style={{
+                                position: "relative",
+                                width: "100%",
+                                overflow: "hidden",
+                            }}
+                        >
+                            <Image
+                                src="/screenshot4.png"
+                                alt="AnimeCaos – busca com capas dinamicas"
+                                width={1379}
+                                height={902}
+                                style={{ width: "100%", height: "auto", display: "block" }}
+                                sizes="(max-width: 768px) 100vw, 860px"
+                            />
+                        </div>
+                    </MacOSWindow>
+                </div>
+
+                {/* Caption */}
+                <motion.p
+                    variants={fadeUp}
+                    initial="hidden"
+                    whileInView="visible"
+                    viewport={{ once: true }}
+                    custom={0.35}
+                    style={{
+                        textAlign: "center",
+                        fontSize: "0.85rem",
+                        color: "var(--text-subtle)",
+                        marginTop: "1rem",
+                        marginBottom: "3rem",
+                        letterSpacing: "0.01em",
+                    }}
+                >
+                    {t("caption_search")}
+                </motion.p>
+
+                {/* Anime detail + episodes */}
+                <MacOSWindow title="AnimeCaos — Detalhes" delay={0.4}>
+                    <div
+                        style={{
+                            position: "relative",
+                            width: "100%",
+                            overflow: "hidden",
+                        }}
+                    >
+                        <Image
+                            src="/screenshot3.png"
+                            alt="AnimeCaos – detalhes do anime e episodios"
+                            width={1372}
+                            height={903}
+                            style={{ width: "100%", height: "auto", display: "block" }}
+                            sizes="(max-width: 768px) 100vw, 1000px"
+                        />
+                    </div>
+                </MacOSWindow>
+
+                {/* Caption */}
+                <motion.p
+                    variants={fadeUp}
+                    initial="hidden"
+                    whileInView="visible"
+                    viewport={{ once: true }}
+                    custom={0.5}
+                    style={{
+                        textAlign: "center",
+                        fontSize: "0.85rem",
+                        color: "var(--text-subtle)",
+                        marginTop: "1rem",
+                        marginBottom: "3rem",
+                        letterSpacing: "0.01em",
+                    }}
+                >
+                    {t("caption_detail")}
+                </motion.p>
+
+                {/* Player */}
+                <div style={{ padding: "0 3%" }}>
+                    <MacOSWindow title="AnimeCaos — Player" delay={0.55}>
                         <div
                             style={{
                                 position: "relative",
@@ -214,7 +294,7 @@ export default function Screenshots() {
                     initial="hidden"
                     whileInView="visible"
                     viewport={{ once: true }}
-                    custom={0.45}
+                    custom={0.65}
                     style={{
                         textAlign: "center",
                         fontSize: "0.85rem",

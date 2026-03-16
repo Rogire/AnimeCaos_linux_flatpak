@@ -30,6 +30,9 @@ Thumbs.db
 *.swp
 *.bak
 
+# Claude Code
+.claude/
+
 # Landing Page
 landing/node_modules/
 landing/.next/
