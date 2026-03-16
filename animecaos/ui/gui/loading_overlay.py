@@ -153,16 +153,23 @@ class _OverlayCanvas(QWidget):
             base = QColor(255, 255, 255, int(18 * alpha))
             p.fillPath(path, base)
 
-            shimmer_center = -self._SHIMMER_WIDTH + self._phase * (1.0 + 2 * self._SHIMMER_WIDTH)
-            shimmer_left = shimmer_center - self._SHIMMER_WIDTH / 2
-            shimmer_right = shimmer_center + self._SHIMMER_WIDTH / 2
+            # Shimmer: a highlight band sweeps left-to-right
+            shimmer_pos = self._phase  # 0→1
 
             grad = QLinearGradient(rect.left(), 0, rect.right(), 0)
-            transparent = QColor(255, 255, 255, 0)
-            highlight = QColor(255, 255, 255, int(38 * alpha))
-            grad.setColorAt(max(0.0, shimmer_left), transparent)
-            grad.setColorAt(max(0.0, min(1.0, shimmer_center)), highlight)
-            grad.setColorAt(min(1.0, shimmer_right), transparent)
+            clr_t = QColor(255, 255, 255, 0)
+            clr_h = QColor(255, 255, 255, int(30 * alpha))
+
+            hw = self._SHIMMER_WIDTH / 2
+            c = shimmer_pos
+            grad.setColorAt(0.0, clr_t)
+            if c - hw > 0.01:
+                grad.setColorAt(c - hw, clr_t)
+            if 0.01 < c < 0.99:
+                grad.setColorAt(c, clr_h)
+            if c + hw < 0.99:
+                grad.setColorAt(c + hw, clr_t)
+            grad.setColorAt(1.0, clr_t)
 
             p.save()
             p.setClipPath(path)
