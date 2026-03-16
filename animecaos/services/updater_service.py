@@ -128,12 +128,16 @@ class UpdaterService:
                 f.write(f'echo [%DATE% %TIME%] Update started by {exe_name} >> "{log_path}"\n')
                 f.write('echo Aplicando atualizacao...\n')
                 f.write('timeout /t 3 /nobreak > NUL\n')
-                
+
                 # Safeguard: ensure process is truly dead
                 if is_frozen:
                     f.write(f'taskkill /F /IM "{exe_name}" /T >> "{log_path}" 2>&1\n')
+                    f.write('timeout /t 3 /nobreak > NUL\n')
+                    # Clean stale PyInstaller _MEI temp dirs to avoid DLL conflicts
+                    f.write(f'echo [%DATE% %TIME%] Cleaning old _MEI dirs >> "{log_path}"\n')
+                    f.write('for /d %%D in ("%TEMP%\\_MEI*") do rmdir /s /q "%%D" >> "{}" 2>&1\n'.format(log_path))
                     f.write('timeout /t 2 /nobreak > NUL\n')
-                
+
                 if self.download_name.endswith(".zip"):
                     f.write(f'echo [%DATE% %TIME%] Copying from zip extracted dir >> "{log_path}"\n')
                     f.write(f'xcopy "{new_app_dir}\\*" "{base_dir}" /E /Y /C /R /Q >> "{log_path}" 2>&1\n')
@@ -145,15 +149,15 @@ class UpdaterService:
                 else:
                     # Dev mode: just keep the downloaded exe for inspection, don't overwrite main.py!
                     f.write(f'echo [%DATE% %TIME%] Dev mode: keeping {self.download_name} without overwriting scripts >> "{log_path}"\n')
-                
+
                 f.write(f'rmdir /s /q "{temp_dir}" >> "{log_path}" 2>&1\n')
                 f.write(f'echo [%DATE% %TIME%] Attempting restart >> "{log_path}"\n')
-                
+
                 if is_frozen:
                     f.write(f'start "" "{base_dir}\\{exe_name}"\n')
                 else:
                     f.write(f'start "" python "{base_dir}\\main.py"\n')
-                
+
                 f.write(f'echo [%DATE% %TIME%] Batch script finished >> "{log_path}"\n')
                 f.write('del "%~f0"\n')
 
