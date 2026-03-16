@@ -14,10 +14,13 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
 
     return buildLocalizedMetadata({
         locale,
-        title: isPt ? "Anime sem anuncio. Sem drama." : "Anime with no ads. No drama.",
+        title: isPt ? "AnimeCaos - Assistir Anime Desktop Sem Anúncios" : "AnimeCaos - Watch Anime Desktop Without Ads",
         description: isPt
-            ? "Hub desktop open source para assistir anime sem anuncios, com player limpo, download offline e integracao AniList."
-            : "Open source desktop hub to watch anime without ads, with clean playback, offline downloads, and AniList integration.",
+            ? "AnimeCaos - O seu hub desktop open source para assistir animes sem anúncios, com player limpo, download offline e integração AniList."
+            : "AnimeCaos - Open source desktop hub to watch anime without ads, with clean playback, offline downloads, and AniList integration.",
+        keywords: isPt
+            ? ["AnimeCaos", "assistir anime", "download anime", "anime player", "animes online", "animes grátis", "player de animes", "anime desktop"]
+            : ["AnimeCaos", "watch anime", "anime download", "anime player", "free anime", "desktop anime player", "ad-free anime"],
     });
 }
 

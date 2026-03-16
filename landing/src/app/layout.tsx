@@ -4,7 +4,7 @@ import { SITE_NAME, SITE_URL } from "@/lib/seo";
 import "./globals.css";
 
 const siteDescription =
-  "Open source anime desktop hub with unified search, ad-free playback, offline downloads, and AniList integration.";
+  "AnimeCaos - Assistir animes sem anúncios, com player limpo, download offline e integração AniList.";
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
@@ -13,6 +13,7 @@ export const metadata: Metadata = {
     template: `%s | ${SITE_NAME}`,
   },
   description: siteDescription,
+  keywords: ["animecaos", "AnimeCaos", "anime", "assistir anime", "download anime", "anime player", "ani-tupi", "animes online", "animes grátis", "player de animes", "anime desktop", "anime dublado", "anime legendado", "anime pt-br", "anime pt-br dublado", "anime pt-br legendado", "anime pt-br online", "anime pt-br grátis", "anime pt-br player", "anime pt-br desktop", "anime pt-br dublado", "anime pt-br legendado", "anime pt-br online", "anime pt-br grátis", "anime pt-br player", "anime pt-br desktop", "anime pt-br dublado", "anime pt-br legendado", "anime pt-br online", "anime pt-br grátis", "anime pt-br player", "anime pt-br desktop", "anime pt-br dublado", "anime pt-br legendado"],
   robots: { index: true, follow: true },
   alternates: {
     canonical: SITE_URL,

@@ -25,11 +25,13 @@ export function buildLocalizedMetadata({
   pathname = "",
   title,
   description,
+  keywords,
 }: {
   locale: AppLocale;
   pathname?: string;
   title: string;
   description: string;
+  keywords?: string[];
 }): Metadata {
   const path = normalizePathname(pathname);
   const canonical = `${SITE_URL}/${locale}${path}`;
@@ -37,6 +39,7 @@ export function buildLocalizedMetadata({
   return {
     title,
     description,
+    keywords,
     alternates: {
       canonical,
       languages: {
