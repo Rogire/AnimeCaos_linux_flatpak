@@ -1,20 +1,20 @@
+import logging
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from os import cpu_count
 
 import requests
 from bs4 import BeautifulSoup
-from selenium import webdriver
-from selenium.common.exceptions import TimeoutException, WebDriverException
+from selenium.common.exceptions import TimeoutException
 from selenium.webdriver.common.by import By
-from selenium.webdriver.firefox.service import Service as FirefoxService
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.wait import WebDriverWait
 
 from animecaos.core.loader import PluginInterface
 from animecaos.core.repository import rep
 
-from .utils import build_firefox_options, is_firefox_installed_as_snap
+from .utils import make_driver
 
+log = logging.getLogger(__name__)
 
 REQUEST_TIMEOUT_SECONDS = 15
 HEADERS = {"User-Agent": "Mozilla/5.0 (animecaos)"}
@@ -36,9 +36,6 @@ class AnimesOnlineCC(PluginInterface):
 
         soup = BeautifulSoup(response.text, "html.parser")
         divs = soup.find_all("div", class_="data")
-        
-        print(f"[{AnimesOnlineCC.name}] search_anime: {len(divs)} divs encontradas com class='data'")
-        print(f"[{AnimesOnlineCC.name}] HTML length: {len(response.text)} chars")
 
         titles_urls: list[tuple[str, str]] = []
         for div in divs:
@@ -52,8 +49,8 @@ class AnimesOnlineCC(PluginInterface):
             title = anchor.get_text(strip=True)
             anime_url = anchor["href"]
             titles_urls.append((title, anime_url))
-            
-        print(f"[{AnimesOnlineCC.name}] {len(titles_urls)} animes encontrados")
+
+        log.debug("%s: %d animes encontrados", AnimesOnlineCC.name, len(titles_urls))
 
         def inspect_season_count(anime_url: str) -> int:
             try:
@@ -106,24 +103,16 @@ class AnimesOnlineCC(PluginInterface):
 
     @staticmethod
     def search_player_src(url_episode: str) -> str:
-        options = build_firefox_options()
-
-        try:
-            if is_firefox_installed_as_snap():
-                service = FirefoxService(executable_path="/snap/bin/geckodriver")
-                driver = webdriver.Firefox(options=options, service=service)
-            else:
-                driver = webdriver.Firefox(options=options)
-        except WebDriverException as exc:
-            raise RuntimeError("Firefox/geckodriver nao encontrado.") from exc
-
+        driver = make_driver()
         try:
             driver.get(url_episode)
-            iframe = WebDriverWait(driver, 10).until(
-                EC.visibility_of_element_located(
-                    (By.XPATH, "/html/body/div[1]/div[2]/div[2]/div[2]/div[1]/div[1]/div[1]/iframe")
+            try:
+                iframe = WebDriverWait(driver, 10).until(
+                    EC.presence_of_element_located((By.CSS_SELECTOR, "iframe[src]"))
                 )
-            )
+            except TimeoutException as exc:
+                raise RuntimeError("Iframe nao encontrado no AnimesOnlineCC.") from exc
+
             src = iframe.get_property("src") or iframe.get_attribute("src")
             if not src:
                 raise RuntimeError("Iframe sem src na pagina de episodio.")
@@ -132,8 +121,6 @@ class AnimesOnlineCC(PluginInterface):
                 raise RuntimeError("Hospedagem de video nao disponivel para este episodio.")
 
             return src
-        except TimeoutException as exc:
-            raise RuntimeError("Iframe nao encontrado no AnimesOnlineCC.") from exc
         finally:
             driver.quit()
 

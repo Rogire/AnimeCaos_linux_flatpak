@@ -1,33 +1,18 @@
-from selenium import webdriver
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support.wait import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
-from selenium.common.exceptions import TimeoutException, WebDriverException
-from selenium.webdriver.firefox.service import Service as FirefoxService
-from urllib.parse import quote
-import time
+import logging
 
-from animecaos.core.paths import get_bin_path
+from selenium.common.exceptions import TimeoutException
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.support.wait import WebDriverWait
+from urllib.parse import quote
+
 from animecaos.core.repository import rep
 from animecaos.core.loader import PluginInterface
-from .utils import build_firefox_options, is_firefox_installed_as_snap
+from .utils import make_driver
 
+log = logging.getLogger(__name__)
 
-def _make_driver() -> webdriver.Firefox:
-    options = build_firefox_options()
-    try:
-        if is_firefox_installed_as_snap():
-            service = FirefoxService(executable_path="/snap/bin/geckodriver")
-            return webdriver.Firefox(options=options, service=service)
-            
-        gd_path = get_bin_path("geckodriver")
-        if gd_path != "geckodriver":
-            service = FirefoxService(executable_path=gd_path)
-            return webdriver.Firefox(options=options, service=service)
-            
-        return webdriver.Firefox(options=options)
-    except WebDriverException as exc:
-        raise RuntimeError("Firefox/geckodriver nao encontrado.") from exc
+_PAGE_LOAD_TIMEOUT = 15
 
 
 class BetterAnime(PluginInterface):
@@ -40,10 +25,17 @@ class BetterAnime(PluginInterface):
     def search_anime(query: str) -> None:
         q = quote(query)
         url = f"https://betteranime.net/pesquisa?pesquisa={q}"
-        driver = _make_driver()
+        driver = make_driver()
+        driver.set_page_load_timeout(_PAGE_LOAD_TIMEOUT)
         try:
             driver.get(url)
-            time.sleep(3)
+
+            try:
+                WebDriverWait(driver, 8).until(
+                    EC.presence_of_element_located((By.CSS_SELECTOR, "article a"))
+                )
+            except TimeoutException:
+                return
 
             cards = driver.find_elements(By.CSS_SELECTOR, "article a")
             for a in cards:
@@ -53,16 +45,23 @@ class BetterAnime(PluginInterface):
                 if title and href:
                     rep.add_anime(title, href, BetterAnime.name)
         except Exception as e:
-            print(f"[{BetterAnime.name}] search_anime erro: {e}")
+            log.debug("%s: search_anime erro: %s", BetterAnime.name, e)
         finally:
             driver.quit()
 
     @staticmethod
     def search_episodes(anime: str, anime_url: str, params: object = None) -> None:
-        driver = _make_driver()
+        driver = make_driver()
+        driver.set_page_load_timeout(_PAGE_LOAD_TIMEOUT)
         try:
             driver.get(anime_url)
-            time.sleep(3)
+
+            try:
+                WebDriverWait(driver, 8).until(
+                    EC.presence_of_element_located((By.CSS_SELECTOR, "a.list-group-item, #episodesList a"))
+                )
+            except TimeoutException:
+                return
 
             ep_links = []
             title_list = []
@@ -79,25 +78,27 @@ class BetterAnime(PluginInterface):
                 title_list.reverse()
                 rep.add_episode_list(anime, title_list, ep_links, BetterAnime.name)
         except Exception as e:
-            print(f"[{BetterAnime.name}] search_episodes erro: {e}")
+            log.debug("%s: search_episodes erro: %s", BetterAnime.name, e)
         finally:
             driver.quit()
 
     @staticmethod
     def search_player_src(episode_url: str) -> str:
-        driver = _make_driver()
+        driver = make_driver()
+        driver.set_page_load_timeout(_PAGE_LOAD_TIMEOUT)
         try:
             driver.get(episode_url)
             try:
                 iframe = WebDriverWait(driver, 12).until(
-                    EC.presence_of_element_located((By.CSS_SELECTOR, "iframe, video"))
+                    EC.presence_of_element_located((By.CSS_SELECTOR, "iframe[src], video"))
                 )
             except TimeoutException as exc:
                 raise RuntimeError("Player nao encontrado.") from exc
 
             src = iframe.get_attribute("src") or ""
             if not src:
-                src = iframe.find_element(By.CSS_SELECTOR, "source").get_attribute("src")
+                src_elem = iframe.find_element(By.CSS_SELECTOR, "source")
+                src = src_elem.get_attribute("src") if src_elem else ""
                 if not src:
                     raise RuntimeError("Sem src no BetterAnime.")
 

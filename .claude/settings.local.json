@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:animefire.io)",
+      "WebFetch(domain:animesvision.biz)",
+      "WebFetch(domain:hinatasoul.com)",
+      "Bash(python -c \":*)",
+      "Bash(python -c \"from animecaos.ui.gui.loading_overlay import LoadingOverlay; from animecaos.ui.gui.main_window import MainWindow; print\\(''OK''\\)\")",
+      "Bash(python -c \"from animecaos.ui.gui.main_window import MainWindow; print\\(''OK''\\)\")"
+    ]
+  }
+}

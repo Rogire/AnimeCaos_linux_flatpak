@@ -1,20 +1,20 @@
+import logging
 import re
 import unicodedata
 
 import requests
 from bs4 import BeautifulSoup
-from selenium import webdriver
-from selenium.common.exceptions import TimeoutException, WebDriverException
+from selenium.common.exceptions import TimeoutException
 from selenium.webdriver.common.by import By
-from selenium.webdriver.firefox.service import Service as FirefoxService
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.wait import WebDriverWait
 
 from animecaos.core.loader import PluginInterface
 from animecaos.core.repository import rep
 
-from .utils import build_firefox_options, is_firefox_installed_as_snap
+from .utils import make_driver
 
+log = logging.getLogger(__name__)
 
 REQUEST_TIMEOUT_SECONDS = 15
 HEADERS = {"User-Agent": "Mozilla/5.0 (animecaos)"}
@@ -45,18 +45,6 @@ class AnimeFire(PluginInterface):
         soup = BeautifulSoup(response.text, "html.parser")
         target_class = "col-6 col-sm-4 col-md-3 col-lg-2 mb-1 minWDanime divCardUltimosEps"
         cards = soup.find_all("div", class_=target_class)
-        
-        print(f"[{AnimeFire.name}] search_anime: {len(cards)} cards encontrados com class='{target_class}'")
-        print(f"[{AnimeFire.name}] HTML length: {len(response.text)} chars")
-        
-        # Mostrar todas as classes div encontradas
-        all_divs = soup.find_all("div")
-        classes_found = set()
-        for div in all_divs[:50]:
-            classes = div.get("class", [])
-            if classes:
-                classes_found.add(" ".join(classes))
-        print(f"[{AnimeFire.name}] Classes div encontradas: {list(classes_found)[:20]}")
 
         titles_urls: list[tuple[str, str]] = []
         for card in cards:
@@ -67,20 +55,19 @@ class AnimeFire(PluginInterface):
             titles_urls.append((title_tag.get_text(strip=True), link_tag["href"]))
 
         if not titles_urls:
-            # Fallback parser for minor HTML layout changes.
-            fallback_urls = []
-            for div in cards:
-                article = getattr(div, "article", None)
-                anchor = getattr(article, "a", None) if article else None
+            # Fallback: extract from article > a structure
+            for card in cards:
+                article = card.find("article")
+                anchor = article.find("a", href=True) if article else None
                 if anchor and anchor.get("href"):
-                    fallback_urls.append(anchor["href"])
-            titles = [h3.get_text(strip=True) for h3 in soup.find_all("h3", class_="animeTitle")]
-            titles_urls = list(zip(titles, fallback_urls))
+                    title = anchor.get("title") or anchor.get_text(strip=True)
+                    if title:
+                        titles_urls.append((title, anchor["href"]))
 
         if not titles_urls:
             return
 
-        print(f"[{AnimeFire.name}] {len(titles_urls)} animes encontrados")
+        log.debug("%s: %d animes encontrados", AnimeFire.name, len(titles_urls))
         for title, anime_url in titles_urls:
             rep.add_anime(title, anime_url, AnimeFire.name)
 
@@ -100,17 +87,7 @@ class AnimeFire(PluginInterface):
 
     @staticmethod
     def search_player_src(url_episode: str) -> str:
-        options = build_firefox_options()
-
-        try:
-            if is_firefox_installed_as_snap():
-                service = FirefoxService(executable_path="/snap/bin/geckodriver")
-                driver = webdriver.Firefox(options=options, service=service)
-            else:
-                driver = webdriver.Firefox(options=options)
-        except WebDriverException as exc:
-            raise RuntimeError("Firefox/geckodriver nao encontrado.") from exc
-
+        driver = make_driver()
         try:
             driver.get(url_episode)
 
@@ -126,9 +103,7 @@ class AnimeFire(PluginInterface):
 
             try:
                 iframe = WebDriverWait(driver, 10).until(
-                    EC.visibility_of_element_located(
-                        (By.XPATH, "/html/body/div[2]/div[2]/div/div[1]/div[1]/div/div/div[2]/div[4]/iframe")
-                    )
+                    EC.presence_of_element_located((By.CSS_SELECTOR, "iframe[src]"))
                 )
                 src = iframe.get_property("src") or iframe.get_attribute("src")
                 if src:

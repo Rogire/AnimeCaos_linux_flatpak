@@ -33,6 +33,7 @@ from animecaos.services.history_service import HistoryEntry, HistoryService
 from animecaos.services.watchlist_service import WatchlistService
 from animecaos.services.anilist_service import AniListService
 from animecaos.services.updater_service import UpdaterService
+from .loading_overlay import LoadingOverlay
 from .workers import FunctionWorker, DownloadWorker, UpdaterCheckWorker
 
 
@@ -368,7 +369,8 @@ class MainWindow(QMainWindow):
 
         self.anime_list = QListWidget()
         self.anime_list.setUniformItemSizes(True)
-        anime_layout.addWidget(self.anime_list, 1)
+        self._search_overlay = LoadingOverlay(self.anime_list)
+        anime_layout.addWidget(self._search_overlay.wrapper, 1)
 
         episodes_panel = self._create_panel()
         episodes_layout = QVBoxLayout(episodes_panel)
@@ -381,7 +383,7 @@ class MainWindow(QMainWindow):
         self.play_button = QPushButton("Reproduzir")
         self.play_button.setObjectName("PrimaryButton")
         self.download_button = QPushButton("Baixar")
-        
+
         episodes_header.addWidget(episodes_title)
         episodes_header.addStretch(1)
         episodes_header.addWidget(self.play_button)
@@ -390,7 +392,8 @@ class MainWindow(QMainWindow):
 
         self.episode_list = QListWidget()
         self.episode_list.setUniformItemSizes(True)
-        episodes_layout.addWidget(self.episode_list, 1)
+        self._episodes_overlay = LoadingOverlay(self.episode_list)
+        episodes_layout.addWidget(self._episodes_overlay.wrapper, 1)
 
         splitter.addWidget(anime_panel)
         splitter.addWidget(episodes_panel)
@@ -524,6 +527,8 @@ class MainWindow(QMainWindow):
         self._thread_pool.start(worker)
 
     def _on_task_failed(self, error_text: str) -> None:
+        self._search_overlay.hide_loading()
+        self._episodes_overlay.hide_loading()
         self._append_log(f"Erro: {error_text}")
         self._set_status("Falha na operacao.")
         summary = error_text.splitlines()[0] if error_text else "Erro inesperado."
@@ -566,6 +571,15 @@ class MainWindow(QMainWindow):
             self._set_status("Digite um termo para buscar.")
             return
 
+        self._search_overlay.show_loading(
+            f"Buscando '{query}'...",
+            messages=[
+                (5_000,  "Consultando fontes... isso pode levar alguns segundos"),
+                (12_000, "Aguarde, algumas fontes demoram mais para responder..."),
+                (20_000, "Quase la... finalizando busca em todas as fontes"),
+                (30_000, "Ainda buscando... a conexao pode estar lenta"),
+            ],
+        )
         self._run_task(
             status_message=f"Buscando '{query}'...",
             task=lambda: self._anime_service.search_animes(query),
@@ -573,6 +587,8 @@ class MainWindow(QMainWindow):
         )
 
     def _on_search_finished(self, anime_titles: object) -> None:
+        self._search_overlay.hide_loading()
+
         if not isinstance(anime_titles, list):
             self._set_status("Resposta invalida da busca.")
             return
@@ -641,6 +657,14 @@ class MainWindow(QMainWindow):
             self._set_status("Selecione um anime primeiro.")
             return
 
+        self._episodes_overlay.show_loading(
+            f"Carregando episodios de '{anime}'...",
+            messages=[
+                (5_000,  "Buscando lista de episodios nas fontes..."),
+                (12_000, "Aguarde, consultando fontes alternativas..."),
+                (20_000, "Quase la..."),
+            ],
+        )
         self._run_task(
             status_message=f"Carregando episodios de '{anime}'...",
             task=lambda: (anime, self._anime_service.fetch_episode_titles(anime)),
@@ -648,6 +672,8 @@ class MainWindow(QMainWindow):
         )
 
     def _on_episodes_finished(self, payload: object) -> None:
+        self._episodes_overlay.hide_loading()
+
         if not isinstance(payload, tuple) or len(payload) != 2:
             self._set_status("Falha ao receber episodios.")
             return
