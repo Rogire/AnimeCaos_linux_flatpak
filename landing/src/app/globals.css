@@ -317,6 +317,50 @@ h6 {
   margin: 0;
 }
 
+/* Screenshot Carousel */
+.screenshots-carousel {
+  position: relative;
+}
+
+.screenshots-carousel-mask {
+  overflow: hidden;
+  -webkit-mask-image: linear-gradient(to right, transparent 0%, black 8%, black 92%, transparent 100%);
+  mask-image: linear-gradient(to right, transparent 0%, black 8%, black 92%, transparent 100%);
+}
+
+.screenshots-carousel-track {
+  width: max-content;
+  display: flex;
+  align-items: flex-start;
+  gap: 1.35rem;
+  animation: screenshots-marquee 42s linear infinite;
+  will-change: transform;
+  transform: translate3d(0, 0, 0);
+  backface-visibility: hidden;
+}
+
+.screenshots-carousel-slide {
+  width: clamp(300px, 68vw, 760px);
+  flex: 0 0 auto;
+}
+
+.screenshots-carousel-caption {
+  margin-top: 0.8rem;
+  text-align: center;
+  font-size: 0.82rem;
+  color: var(--text-subtle);
+  letter-spacing: 0.01em;
+}
+
+@keyframes screenshots-marquee {
+  from {
+    transform: translate3d(0, 0, 0);
+  }
+  to {
+    transform: translate3d(calc(-50% - 0.675rem), 0, 0);
+  }
+}
+
 /* ─── Scrollbar ──────────────────────────────────────────────────── */
 ::-webkit-scrollbar {
   width: 6px;

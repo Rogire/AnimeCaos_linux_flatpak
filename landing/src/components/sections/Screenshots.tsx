@@ -16,21 +16,14 @@ const fadeUp: import("framer-motion").Variants = {
 function MacOSWindow({
     title,
     children,
-    delay = 0,
     style = {},
 }: {
     title: string;
     children: React.ReactNode;
-    delay?: number;
     style?: React.CSSProperties;
 }) {
     return (
-        <motion.div
-            variants={fadeUp}
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, margin: "-80px" }}
-            custom={delay}
+        <div
             style={{
                 width: "100%",
                 borderRadius: 16,
@@ -43,7 +36,6 @@ function MacOSWindow({
                 ...style,
             }}
         >
-            {/* Title Bar */}
             <div
                 style={{
                     display: "flex",
@@ -55,7 +47,6 @@ function MacOSWindow({
                     position: "relative",
                 }}
             >
-                {/* Traffic lights */}
                 <div style={{ display: "flex", gap: "0.4rem" }}>
                     {["#ff5f56", "#ffbd2e", "#27c93f"].map((c) => (
                         <div
@@ -70,7 +61,6 @@ function MacOSWindow({
                         />
                     ))}
                 </div>
-                {/* Centered title */}
                 <span
                     style={{
                         position: "absolute",
@@ -88,21 +78,52 @@ function MacOSWindow({
                 </span>
             </div>
 
-            {/* Content */}
             {children}
-        </motion.div>
+        </div>
     );
 }
 
 export default function Screenshots() {
     const t = useTranslations("screenshots");
 
+    const items = [
+        {
+            title: "AnimeCaos - Biblioteca",
+            src: "/screenshot2.webp",
+            alt: "AnimeCaos - tela principal do app",
+            width: 1397,
+            height: 926,
+        },
+        {
+            title: "AnimeCaos - Busca",
+            src: "/screenshot4.webp",
+            alt: "AnimeCaos - busca com capas dinamicas",
+            width: 1379,
+            height: 902,
+        },
+        {
+            title: "AnimeCaos - Detalhes",
+            src: "/screenshot3.webp",
+            alt: "AnimeCaos - detalhes do anime e episodios",
+            width: 1372,
+            height: 903,
+        },
+        {
+            title: "AnimeCaos - Player",
+            src: "/screenshot.webp",
+            alt: "AnimeCaos - player integrado",
+            width: 1444,
+            height: 873,
+        },
+    ];
+
+    const loopItems = [...items, ...items];
+
     return (
         <section
             className="section"
             style={{ position: "relative", zIndex: 1, paddingTop: "3rem" }}
         >
-            {/* Ambient glow */}
             <div
                 aria-hidden="true"
                 style={{
@@ -120,7 +141,6 @@ export default function Screenshots() {
             />
 
             <div className="container">
-                {/* Section header */}
                 <motion.div
                     variants={fadeUp}
                     initial="hidden"
@@ -146,165 +166,38 @@ export default function Screenshots() {
                     </h2>
                 </motion.div>
 
-                {/* Primary screenshot – App */}
-                <MacOSWindow title="AnimeCaos — Biblioteca" delay={0.1}>
-                    <div
-                        style={{
-                            position: "relative",
-                            width: "100%",
-                            overflow: "hidden",
-                        }}
-                    >
-                        <Image
-                            src="/screenshot2.webp"
-                            alt="AnimeCaos – tela principal do app"
-                            width={1397}
-                            height={926}
-                            style={{ width: "100%", height: "auto", display: "block" }}
-                            sizes="(max-width: 768px) 100vw, 1000px"
-                            priority
-                        />
-                    </div>
-                </MacOSWindow>
-
-                {/* Caption */}
-                <motion.p
-                    variants={fadeUp}
-                    initial="hidden"
-                    whileInView="visible"
-                    viewport={{ once: true }}
-                    custom={0.25}
-                    style={{
-                        textAlign: "center",
-                        fontSize: "0.85rem",
-                        color: "var(--text-subtle)",
-                        marginTop: "1rem",
-                        marginBottom: "3rem",
-                        letterSpacing: "0.01em",
-                    }}
-                >
-                    {t("caption_app")}
-                </motion.p>
-
-                {/* Search results */}
-                <div style={{ padding: "0 3%" }}>
-                    <MacOSWindow title="AnimeCaos — Busca" delay={0.25}>
-                        <div
-                            style={{
-                                position: "relative",
-                                width: "100%",
-                                overflow: "hidden",
-                            }}
-                        >
-                            <Image
-                                src="/screenshot4.webp"
-                                alt="AnimeCaos – busca com capas dinamicas"
-                                width={1379}
-                                height={902}
-                                style={{ width: "100%", height: "auto", display: "block" }}
-                                sizes="(max-width: 768px) 100vw, 860px"
-                            />
+                <div className="screenshots-carousel">
+                    <div className="screenshots-carousel-mask">
+                        <div className="screenshots-carousel-track">
+                            {loopItems.map((item, index) => (
+                                <article
+                                    key={`${item.src}-${index}`}
+                                    className="screenshots-carousel-slide"
+                                >
+                                    <MacOSWindow title={item.title}>
+                                        <div
+                                            style={{
+                                                position: "relative",
+                                                width: "100%",
+                                                overflow: "hidden",
+                                            }}
+                                        >
+                                            <Image
+                                                src={item.src}
+                                                alt={item.alt}
+                                                width={item.width}
+                                                height={item.height}
+                                                style={{ width: "100%", height: "auto", display: "block" }}
+                                                sizes="(max-width: 768px) 88vw, 700px"
+                                                priority={index < 2}
+                                            />
+                                        </div>
+                                    </MacOSWindow>
+                                </article>
+                            ))}
                         </div>
-                    </MacOSWindow>
-                </div>
-
-                {/* Caption */}
-                <motion.p
-                    variants={fadeUp}
-                    initial="hidden"
-                    whileInView="visible"
-                    viewport={{ once: true }}
-                    custom={0.35}
-                    style={{
-                        textAlign: "center",
-                        fontSize: "0.85rem",
-                        color: "var(--text-subtle)",
-                        marginTop: "1rem",
-                        marginBottom: "3rem",
-                        letterSpacing: "0.01em",
-                    }}
-                >
-                    {t("caption_search")}
-                </motion.p>
-
-                {/* Anime detail + episodes */}
-                <MacOSWindow title="AnimeCaos — Detalhes" delay={0.4}>
-                    <div
-                        style={{
-                            position: "relative",
-                            width: "100%",
-                            overflow: "hidden",
-                        }}
-                    >
-                        <Image
-                            src="/screenshot3.webp"
-                            alt="AnimeCaos – detalhes do anime e episodios"
-                            width={1372}
-                            height={903}
-                            style={{ width: "100%", height: "auto", display: "block" }}
-                            sizes="(max-width: 768px) 100vw, 1000px"
-                        />
                     </div>
-                </MacOSWindow>
-
-                {/* Caption */}
-                <motion.p
-                    variants={fadeUp}
-                    initial="hidden"
-                    whileInView="visible"
-                    viewport={{ once: true }}
-                    custom={0.5}
-                    style={{
-                        textAlign: "center",
-                        fontSize: "0.85rem",
-                        color: "var(--text-subtle)",
-                        marginTop: "1rem",
-                        marginBottom: "3rem",
-                        letterSpacing: "0.01em",
-                    }}
-                >
-                    {t("caption_detail")}
-                </motion.p>
-
-                {/* Player */}
-                <div style={{ padding: "0 3%" }}>
-                    <MacOSWindow title="AnimeCaos — Player" delay={0.55}>
-                        <div
-                            style={{
-                                position: "relative",
-                                width: "100%",
-                                overflow: "hidden",
-                            }}
-                        >
-                            <Image
-                                src="/screenshot.webp"
-                                alt="AnimeCaos – player integrado"
-                                width={1444}
-                                height={873}
-                                style={{ width: "100%", height: "auto", display: "block" }}
-                                sizes="(max-width: 768px) 100vw, 860px"
-                            />
-                        </div>
-                    </MacOSWindow>
                 </div>
-
-                {/* Caption */}
-                <motion.p
-                    variants={fadeUp}
-                    initial="hidden"
-                    whileInView="visible"
-                    viewport={{ once: true }}
-                    custom={0.65}
-                    style={{
-                        textAlign: "center",
-                        fontSize: "0.85rem",
-                        color: "var(--text-subtle)",
-                        marginTop: "1rem",
-                        letterSpacing: "0.01em",
-                    }}
-                >
-                    {t("caption_player")}
-                </motion.p>
             </div>
         </section>
     );
