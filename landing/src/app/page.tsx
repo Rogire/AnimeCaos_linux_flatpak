@@ -1,5 +1,6 @@
-import Link from "next/link";
 import type { Metadata } from "next";
+import { headers } from "next/headers";
+import { redirect } from "next/navigation";
 import { SITE_NAME, SITE_URL, SITE_X_HANDLE } from "@/lib/seo";
 
 const rootDescription =
@@ -34,35 +35,9 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootPage() {
-  return (
-    <main
-      style={{
-        minHeight: "100dvh",
-        display: "grid",
-        placeItems: "center",
-        padding: "1.5rem",
-      }}
-    >
-      <section
-        className="liquid-glass"
-        style={{ maxWidth: 680, width: "100%", padding: "2rem", zIndex: 1 }}
-      >
-        <h1 className="heading-lg" style={{ marginBottom: "0.75rem" }}>
-          AnimeCaos
-        </h1>
-        <p className="text-muted" style={{ marginBottom: "1.5rem", lineHeight: 1.65 }}>
-          Select your language to continue.
-        </p>
-        <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap" }}>
-          <Link href="/pt" className="btn btn-primary">
-            Portuguese (PT)
-          </Link>
-          <Link href="/en" className="btn btn-ghost">
-            English
-          </Link>
-        </div>
-      </section>
-    </main>
-  );
+export default async function RootPage() {
+  const requestHeaders = await headers();
+  const acceptLanguage = requestHeaders.get("accept-language")?.toLowerCase() ?? "";
+  const preferredLocale = acceptLanguage.includes("en") ? "en" : "pt";
+  redirect(`/${preferredLocale}`);
 }
