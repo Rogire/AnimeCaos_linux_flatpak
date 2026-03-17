@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { SITE_NAME, SITE_URL, SITE_X_HANDLE } from "@/lib/seo";
 
@@ -14,7 +13,7 @@ export const metadata: Metadata = {
     languages: {
       en: `${SITE_URL}/en`,
       pt: `${SITE_URL}/pt`,
-      "x-default": SITE_URL,
+      "x-default": `${SITE_URL}/pt`,
     },
   },
   openGraph: {
@@ -35,9 +34,6 @@ export const metadata: Metadata = {
   },
 };
 
-export default async function RootPage() {
-  const requestHeaders = await headers();
-  const acceptLanguage = requestHeaders.get("accept-language")?.toLowerCase() ?? "";
-  const preferredLocale = acceptLanguage.includes("en") ? "en" : "pt";
-  redirect(`/${preferredLocale}`);
+export default function RootPage() {
+  redirect("/pt");
 }
