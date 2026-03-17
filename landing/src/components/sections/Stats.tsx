@@ -27,10 +27,7 @@ function CountUp({ end, prefix = "", suffix = "" }: { end: number; prefix?: stri
 
     useEffect(() => {
         if (!inView) return;
-        if (end <= 0) {
-            setCount(0);
-            return;
-        }
+        if (end <= 0) return;
 
         const duration = 2100;
         let frame = 0;
