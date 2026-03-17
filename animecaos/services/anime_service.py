@@ -1,10 +1,14 @@
 from __future__ import annotations
 
+import logging
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Sequence
 
 from animecaos.core import loader
 from animecaos.core.repository import rep
 from animecaos.player.video_player import play_video
+
+log = logging.getLogger(__name__)
 
 
 class AnimeService:
@@ -38,7 +42,28 @@ class AnimeService:
         self.ensure_plugins_loaded()
         rep.reset_runtime_data()
         rep.search_anime(normalized_query)
-        return rep.get_anime_titles()
+        titles = rep.get_anime_titles()
+
+        if not titles:
+            return []
+
+        # Validate in parallel: only return animes with at least one playable source
+        valid: list[str] = []
+        with ThreadPoolExecutor(max_workers=min(len(titles), 4)) as executor:
+            future_to_title = {
+                executor.submit(rep.is_playable, t): t for t in titles
+            }
+            for future in as_completed(future_to_title):
+                title = future_to_title[future]
+                try:
+                    if future.result():
+                        valid.append(title)
+                    else:
+                        log.debug("Filtrado (sem player valido): %s", title)
+                except Exception:
+                    log.debug("Filtrado (erro na validacao): %s", title)
+
+        return sorted(valid)
 
     def fetch_episode_titles(self, anime: str) -> list[str]:
         if not anime:

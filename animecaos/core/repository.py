@@ -123,6 +123,28 @@ class Repository:
         # Prefer shorter lists to reduce chance of OVA/special mismatch across sources.
         return sorted(episode_lists, key=len)[0]
 
+    def is_playable(self, anime: str) -> bool:
+        """Fast check (HTTP only, no Selenium): load episodes and test the first one."""
+        try:
+            self.search_episodes(anime)
+        except Exception:
+            return False
+
+        episode_sources = self.anime_episodes_urls.get(anime, [])
+        if not episode_sources:
+            return False
+
+        for urls, source in episode_sources:
+            if not urls:
+                continue
+            try:
+                if self.sources[source].is_episode_playable(urls[0]):
+                    return True
+            except Exception:
+                continue
+
+        return False
+
     def search_player(self, anime: str, episode_num: int) -> str:
         """
         Returns first playable source url found for the requested episode.
@@ -146,7 +168,9 @@ class Repository:
                 try:
                     player_src = future.result()
                     if player_src:
-                        if "blogger.com" in player_src:
+                        from urllib.parse import urlparse
+                        host = urlparse(player_src).netloc.lower()
+                        if "blogger.com" in host:
                             errors.append(f"{source}: link do blogger bloqueado globalmente")
                             continue
                         for pending in future_to_source:
@@ -157,6 +181,12 @@ class Repository:
                 except Exception as exc:
                     errors.append(f"{source}: {exc}")
 
+        all_blogger = all("blogger" in e.lower() or "hospedagem" in e.lower() for e in errors) if errors else False
+        if all_blogger:
+            raise RuntimeError(
+                "Este anime usa hospedagem de video indisponivel (Blogger). "
+                "Tente outro titulo."
+            )
         joined_errors = "; ".join(errors) if errors else "sem detalhes"
         raise RuntimeError(f"Falha ao resolver player em todas as fontes ({joined_errors}).")
 

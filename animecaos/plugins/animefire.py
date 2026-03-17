@@ -94,6 +94,21 @@ class AnimeFire(PluginInterface):
         rep.add_episode_list(anime, episode_titles, episode_links, AnimeFire.name)
 
     @staticmethod
+    def is_episode_playable(url_episode: str) -> bool:
+        """Fast HTTP check: hit the animefire video API to see if CDN sources exist."""
+        # Episode URL: https://animefire.io/animes/{slug}/{ep}
+        # Video API:   https://animefire.io/video/{slug}/{ep}
+        try:
+            api_url = url_episode.replace("/animes/", "/video/")
+            response = requests.get(api_url, timeout=REQUEST_TIMEOUT_SECONDS, headers=HEADERS)
+            if response.status_code != 200:
+                return False
+            data = response.json().get("data", [])
+            return len(data) > 0
+        except Exception:
+            return False
+
+    @staticmethod
     def search_player_src(url_episode: str) -> str:
         driver = make_driver()
         try:

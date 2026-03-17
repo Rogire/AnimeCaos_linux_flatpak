@@ -24,6 +24,13 @@ class PluginInterface(ABC):
     def search_player_src(url_episode: str) -> str:
         raise NotImplementedError
 
+    @staticmethod
+    def is_episode_playable(url_episode: str) -> bool:
+        """Fast check (no Selenium) if an episode URL has a playable source.
+        Plugins can override for a lightweight HTTP-only check.
+        Default: assume playable (fall back to full check at play time)."""
+        return True
+
 def load_plugins(languages: set[str], plugins: Sequence[str] | None = None) -> None:
     plugin_names = tuple(plugins) if plugins is not None else AVAILABLE_PLUGINS
 

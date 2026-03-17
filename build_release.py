@@ -81,6 +81,7 @@ def run_pyinstaller():
         "--add-data=icon.png;.",
         "--add-data=bin;bin", # the crucial part: embedding our downloaded binaries!
         "--hidden-import=animecaos.plugins.hinatasoul",
+        "--hidden-import=animecaos.plugins.betteranime",
         "--hidden-import=animecaos.plugins.animesonlinecc",
         "--hidden-import=animecaos.plugins.animefire",
         "--hidden-import=animecaos.plugins.animesvision",

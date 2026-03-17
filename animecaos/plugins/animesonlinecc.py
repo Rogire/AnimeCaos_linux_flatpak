@@ -102,6 +102,17 @@ class AnimesOnlineCC(PluginInterface):
         rep.add_episode_list(anime, titles, urls, AnimesOnlineCC.name)
 
     @staticmethod
+    def is_episode_playable(url_episode: str) -> bool:
+        """Fast HTTP check: look for blogger iframe in raw HTML."""
+        try:
+            response = requests.get(url_episode, timeout=REQUEST_TIMEOUT_SECONDS, headers=HEADERS)
+            if response.status_code != 200:
+                return False
+            return "blogger.com/video" not in response.text
+        except Exception:
+            return False
+
+    @staticmethod
     def search_player_src(url_episode: str) -> str:
         driver = make_driver()
         try:

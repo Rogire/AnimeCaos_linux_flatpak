@@ -36,9 +36,9 @@ def build_firefox_options() -> webdriver.FirefoxOptions:
     options = webdriver.FirefoxOptions()
     options.add_argument("--headless")
 
-    # Prefer Cloudflare DNS resolution to reduce ISP/local DNS instability.
-    # mode=2 => TRR first, then native resolver fallback.
-    options.set_preference("network.trr.mode", 2)
+    # Force Cloudflare DNS-over-HTTPS to bypass ISP DNS blocks.
+    # mode=3 => TRR only (never falls back to native DNS resolver).
+    options.set_preference("network.trr.mode", 3)
     options.set_preference("network.trr.uri", "https://1.1.1.1/dns-query")
     options.set_preference("network.trr.bootstrapAddress", "1.1.1.1")
 
