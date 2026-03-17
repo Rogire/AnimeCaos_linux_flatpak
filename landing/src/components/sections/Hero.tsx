@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import { motion, Variants } from "framer-motion";
 import Link from "next/link";
 import { Download, Github, ArrowRight, Star } from "lucide-react";
@@ -23,6 +24,184 @@ interface HeroProps {
 
 export default function Hero({ locale }: HeroProps) {
     const t = useTranslations("hero");
+    const canvasContainerRef = useRef<HTMLDivElement | null>(null);
+
+    useEffect(() => {
+        const container = canvasContainerRef.current;
+        if (!container) return;
+
+        let frameId = 0;
+        let disposed = false;
+        let renderer: {
+            domElement: HTMLCanvasElement;
+            render: () => void;
+            dispose: () => void;
+            resize: () => void;
+        } | null = null;
+
+        const init = async () => {
+            const THREE = await import("three");
+            if (disposed || !container) return;
+
+            const scene = new THREE.Scene();
+            const camera = new THREE.PerspectiveCamera(75, container.clientWidth / container.clientHeight, 0.1, 1000);
+            camera.position.z = 20;
+
+            const webglRenderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+            webglRenderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.8));
+            webglRenderer.setSize(container.clientWidth, container.clientHeight);
+            container.appendChild(webglRenderer.domElement);
+
+            const particlesCount = 1400;
+            const cubeSize = 44;
+
+            const spriteCanvas = document.createElement("canvas");
+            spriteCanvas.width = 64;
+            spriteCanvas.height = 64;
+            const ctx = spriteCanvas.getContext("2d");
+            if (ctx) {
+                const gradient = ctx.createRadialGradient(32, 32, 0, 32, 32, 32);
+                gradient.addColorStop(0, "rgba(255,255,255,1)");
+                gradient.addColorStop(0.4, "rgba(255,255,255,0.9)");
+                gradient.addColorStop(1, "rgba(255,255,255,0)");
+                ctx.fillStyle = gradient;
+                ctx.fillRect(0, 0, 64, 64);
+            }
+            const sprite = new THREE.CanvasTexture(spriteCanvas);
+
+            const particlesGeometry = new THREE.BufferGeometry();
+            const posArray = new Float32Array(particlesCount * 3);
+            const basePosArray = new Float32Array(particlesCount * 3);
+            const phaseArray = new Float32Array(particlesCount);
+            for (let i = 0; i < particlesCount * 3; i += 3) {
+                posArray[i] = (Math.random() - 0.5) * cubeSize;
+                posArray[i + 1] = (Math.random() - 0.5) * cubeSize;
+                posArray[i + 2] = (Math.random() - 0.5) * cubeSize;
+                basePosArray[i] = posArray[i];
+                basePosArray[i + 1] = posArray[i + 1];
+                basePosArray[i + 2] = posArray[i + 2];
+                phaseArray[i / 3] = Math.random() * Math.PI * 2;
+            }
+            particlesGeometry.setAttribute("position", new THREE.BufferAttribute(posArray, 3));
+
+            const particlesMaterial = new THREE.PointsMaterial({
+                size: 0.15,
+                map: sprite,
+                transparent: true,
+                opacity: 0.75,
+                color: 0xe63f3f,
+                sizeAttenuation: true,
+                depthWrite: false,
+            });
+
+            const particlesGeometry2 = new THREE.BufferGeometry();
+            const posArray2 = new Float32Array((particlesCount / 2) * 3);
+            const basePosArray2 = new Float32Array((particlesCount / 2) * 3);
+            const phaseArray2 = new Float32Array(particlesCount / 2);
+            for (let i = 0; i < (particlesCount / 2) * 3; i += 3) {
+                posArray2[i] = (Math.random() - 0.5) * (cubeSize + 6);
+                posArray2[i + 1] = (Math.random() - 0.5) * (cubeSize + 6);
+                posArray2[i + 2] = (Math.random() - 0.5) * (cubeSize + 6);
+                basePosArray2[i] = posArray2[i];
+                basePosArray2[i + 1] = posArray2[i + 1];
+                basePosArray2[i + 2] = posArray2[i + 2];
+                phaseArray2[i / 3] = Math.random() * Math.PI * 2;
+            }
+            particlesGeometry2.setAttribute("position", new THREE.BufferAttribute(posArray2, 3));
+
+            const particlesMaterial2 = new THREE.PointsMaterial({
+                size: 0.11,
+                map: sprite,
+                transparent: true,
+                opacity: 0.42,
+                color: 0xaab8d6,
+                sizeAttenuation: true,
+                depthWrite: false,
+            });
+
+            const group = new THREE.Group();
+            const points1 = new THREE.Points(particlesGeometry, particlesMaterial);
+            const points2 = new THREE.Points(particlesGeometry2, particlesMaterial2);
+            group.add(points1);
+            group.add(points2);
+            scene.add(group);
+
+            scene.add(new THREE.AmbientLight(0xffffff, 0.45));
+            const pointLight = new THREE.PointLight(0xffffff, 0.6);
+            pointLight.position.set(10, 10, 10);
+            scene.add(pointLight);
+
+            const position1 = particlesGeometry.getAttribute("position");
+            const position2 = particlesGeometry2.getAttribute("position");
+            const animate = () => {
+                if (disposed) return;
+
+                const t = performance.now() * 0.001;
+
+                for (let i = 0; i < particlesCount; i++) {
+                    const idx = i * 3;
+                    const p = phaseArray[i];
+                    posArray[idx] = basePosArray[idx] + Math.cos(t * 0.35 + p * 0.7) * 0.16;
+                    posArray[idx + 1] = basePosArray[idx + 1] + Math.sin(t * 0.55 + p) * 0.34;
+                    posArray[idx + 2] = basePosArray[idx + 2] + Math.cos(t * 0.25 + p * 0.4) * 0.1;
+                }
+                position1.needsUpdate = true;
+
+                for (let i = 0; i < particlesCount / 2; i++) {
+                    const idx = i * 3;
+                    const p = phaseArray2[i];
+                    posArray2[idx] = basePosArray2[idx] + Math.cos(t * 0.42 + p * 0.6) * 0.22;
+                    posArray2[idx + 1] = basePosArray2[idx + 1] + Math.sin(t * 0.65 + p) * 0.42;
+                    posArray2[idx + 2] = basePosArray2[idx + 2] + Math.cos(t * 0.3 + p * 0.45) * 0.12;
+                }
+                position2.needsUpdate = true;
+
+                group.rotation.y += 0.0024;
+                group.rotation.x += 0.0012;
+                group.position.y = Math.sin(t * 0.45) * 0.45;
+                particlesMaterial.opacity = 0.64 + Math.sin(t * 1.9) * 0.06;
+                particlesMaterial2.opacity = 0.36 + Math.cos(t * 1.55) * 0.05;
+
+                webglRenderer.render(scene, camera);
+                frameId = requestAnimationFrame(animate);
+            };
+            animate();
+
+            const resize = () => {
+                if (!container) return;
+                camera.aspect = container.clientWidth / container.clientHeight;
+                camera.updateProjectionMatrix();
+                webglRenderer.setSize(container.clientWidth, container.clientHeight);
+            };
+            window.addEventListener("resize", resize);
+
+            renderer = {
+                domElement: webglRenderer.domElement,
+                render: () => webglRenderer.render(scene, camera),
+                dispose: () => {
+                    window.removeEventListener("resize", resize);
+                    cancelAnimationFrame(frameId);
+                    particlesGeometry.dispose();
+                    particlesGeometry2.dispose();
+                    particlesMaterial.dispose();
+                    particlesMaterial2.dispose();
+                    sprite.dispose();
+                    webglRenderer.dispose();
+                    if (container.contains(webglRenderer.domElement)) {
+                        container.removeChild(webglRenderer.domElement);
+                    }
+                },
+                resize,
+            };
+        };
+
+        init();
+
+        return () => {
+            disposed = true;
+            renderer?.dispose();
+        };
+    }, []);
 
     const words1 = t("headline1").split(" ");
     const words2 = t("headline2").split(" ");
@@ -87,6 +266,21 @@ export default function Hero({ locale }: HeroProps) {
                     position: "absolute",
                     inset: 0,
                     zIndex: 2,
+                    pointerEvents: "none",
+                    overflow: "hidden",
+                    mixBlendMode: "screen",
+                    opacity: 0.5,
+                }}
+            >
+                <div ref={canvasContainerRef} style={{ position: "absolute", inset: 0 }} />
+            </div>
+
+            <div
+                aria-hidden="true"
+                style={{
+                    position: "absolute",
+                    inset: 0,
+                    zIndex: 3,
                     boxShadow: "inset 0 -140px 110px -90px rgba(8,11,15,0.85)",
                     filter: "blur(10px)",
                     opacity: 0.75,
@@ -94,7 +288,7 @@ export default function Hero({ locale }: HeroProps) {
                 }}
             />
 
-            <div className="container" style={{ position: "relative", zIndex: 3 }}>
+            <div className="container" style={{ position: "relative", zIndex: 4 }}>
                 <div
                     style={{
                         display: "flex",
