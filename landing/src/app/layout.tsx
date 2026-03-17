@@ -39,7 +39,7 @@ export const metadata: Metadata = {
     images: [`${SITE_URL}/icon.png`],
   },
   verification: {
-    google: "LpvMXpTewlbvkzTc1gMk_LS2zq6DRe8yNt1tvaY4pLU",
+    google: "jWtvjWsVOFaDn8KdIc4PV5dvtiX_6GwTVNvy3xJ75WQ",
   },
 };
 
