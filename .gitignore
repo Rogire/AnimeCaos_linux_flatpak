@@ -69,6 +69,7 @@ cache/
 # Claude / Local tooling
 # -------------------------------
 .claude/
+DOCS/
 
 # -------------------------------
 # Landing (Next.js)
